@@ -1,0 +1,16 @@
+# This file configures dbt to connect to your data warehouse.
+# For the local demo, we will connect to the PostgreSQL container started by Docker Compose.
+
+local-dev:
+  target: default
+  outputs:
+    default:
+      type: postgres
+      host: postgres
+      port: 5432
+      user: demo
+      password: demo123
+      dbname: lakehouse
+      schema: public
+      threads: 4
+      keepalives_idle: 0

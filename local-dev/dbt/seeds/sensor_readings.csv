@@ -1,0 +1,16 @@
+id,sensor_id,temperature,humidity,measured_at,status,location
+1,sensor_001,23.5,45.2,2024-01-15T10:00:00,NORMAL,building_a
+2,sensor_002,25.1,48.7,2024-01-15T10:01:00,NORMAL,building_a
+3,sensor_003,22.8,52.3,2024-01-15T10:02:00,NORMAL,building_b
+4,sensor_004,24.2,46.8,2024-01-15T10:03:00,NORMAL,building_b
+5,sensor_005,21.9,51.2,2024-01-15T10:04:00,NORMAL,building_c
+6,sensor_006,89.5,15.3,2024-01-15T10:05:00,CRITICAL,building_a
+7,sensor_007,156.8,999.0,2024-01-15T10:06:00,ANOMALY,building_c
+8,sensor_008,25.1,44.9,2024-01-15T10:07:00,NORMAL,building_a
+9,sensor_009,23.8,47.3,2024-01-15T10:08:00,NORMAL,building_b
+10,sensor_010,-999.0,5.7,2024-01-15T10:09:00,CRITICAL,building_c
+11,sensor_011,26.2,49.1,2024-01-15T10:10:00,NORMAL,building_a
+12,sensor_012,24.7,50.8,2024-01-15T10:11:00,NORMAL,building_b
+13,sensor_013,22.1,48.4,2024-01-15T10:12:00,NORMAL,building_c
+14,sensor_014,55.3,8.2,2024-01-15T10:13:00,WARNING,building_a
+15,sensor_015,23.9,47.6,2024-01-15T10:14:00,NORMAL,building_b

@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_sensor_data
+    description: "Staged sensor data with data quality flags for Self-Healing Lakehouse"
+    columns:
+      - name: id
+        description: "Unique sensor reading identifier"
+      - name: sensor_id
+        description: "Sensor device identifier"
+      - name: data_quality_flag
+        description: "Data quality assessment flag (HEALTHY/QUALITY_ISSUE/DETECTED_ANOMALY)"
+
+  - name: mart_survival_metrics
+    description: "Self-Healing Lakehouse three-pillar metrics dashboard"
+    columns:
+      - name: pillar
+        description: "Self-Healing Lakehouse pillar (code/observability/guard)"
+      - name: health_percentage
+        description: "Health percentage for the pillar implementation"
+      - name: implementation_pattern
+        description: "Implementation pattern description for learning"

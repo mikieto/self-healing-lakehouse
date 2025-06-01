@@ -1,0 +1,28 @@
+// .devcontainer/devcontainer.json
+{
+  "name": "Self-Healing Lakehouse",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "postCreateCommand": "make setup",
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.12"
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "HashiCorp.terraform",
+        "ms-python.python",
+        "ms-vscode.makefile-tools",
+        "aws-samples/aws-toolkits-vscode"
+      ]
+    }
+  },
+  "forwardPorts": [3000, 5432],
+  "portsAttributes": {
+    "3000": { "label": "Grafana" },
+    "5432": { "label": "PostgreSQL" }
+  }
+}

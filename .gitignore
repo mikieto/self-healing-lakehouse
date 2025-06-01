@@ -1,0 +1,111 @@
+# Self-Healing Lakehouse - .gitignore
+
+# ===========================================
+# Environment Variables (SECURITY CRITICAL)
+# ===========================================
+.env
+.env.local
+.env.*.local
+
+# ===========================================
+# Terraform State Files (SECURITY CRITICAL)
+# ===========================================
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraform/
+.terraform.lock.hcl
+
+# ===========================================
+# AWS Credentials
+# ===========================================
+.aws/
+aws-credentials.json
+credentials.json
+
+# ===========================================
+# dbt Generated Files
+# ===========================================
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# ===========================================
+# Docker & Compose
+# ===========================================
+docker-compose.override.yml
+
+# ===========================================
+# IDE & Editor Files
+# ===========================================
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================================
+# OS Generated Files
+# ===========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===========================================
+# Logs
+# ===========================================
+*.log
+logs/
+
+# ===========================================
+# Python
+# ===========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# ===========================================
+# Node.js (if any)
+# ===========================================
+node_modules/
+npm-debug.log*
+
+# ===========================================
+# Temporary Files
+# ===========================================
+*.tmp
+*.temp
+.cache/
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+
+# dbt
+dbt/target/
+dbt/logs/
+
+# Build artifacts
+*.zip
+dist/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc

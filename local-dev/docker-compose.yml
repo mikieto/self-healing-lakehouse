@@ -1,0 +1,217 @@
+# =======================================================
+# [THREE PILLARS] Local Development Integration
+# =======================================================
+# Purpose: Demonstrate Technical Survival Strategy pillars working together locally
+# Benefit: Complete understanding of pillar interactions before AWS deployment
+# Learning Value: Hands-on experience with integrated self-healing architecture
+
+
+services:
+  # ================================================
+  # [CODE PILLAR] Reproducible Data Foundation
+  # ================================================
+  postgres:
+    image: postgres:15
+    container_name: tss-postgres-code-pillar
+    environment:
+      POSTGRES_DB: lakehouse
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    ports: 
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./monitoring/init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d lakehouse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "tss.pillar=code"
+      - "tss.purpose=reproducible-data-storage"
+      - "tss.component=database"
+      - "tss.learning=Data persistence foundation for Code Pillar"
+    networks:
+      - three-pillars-network
+
+  # ================================================
+  # [OBSERVABILITY PILLAR] Real-time Monitoring
+  # ================================================
+  grafana:
+    image: grafana/grafana-oss:10.3.3
+    container_name: tss-grafana-observability-pillar
+    ports: 
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/three-pillars-dashboard.json
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/datasources:/etc/grafana/provisioning/datasources
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "tss.pillar=observability"
+      - "tss.purpose=real-time-system-visibility"
+      - "tss.component=dashboard"
+      - "tss.learning=Monitor Three Pillars system health in real-time"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - three-pillars-network
+
+  # ================================================
+  # [GUARD PILLAR] Automated Quality Validation
+  # ================================================
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.8.latest
+    container_name: tss-dbt-guard-pillar
+    volumes:
+      - ./dbt:/usr/app/dbt
+      - ./dbt/profiles:/root/.dbt
+    working_dir: /usr/app/dbt
+    environment:
+      - DBT_PROFILES_DIR=/root/.dbt
+    labels:
+      - "tss.pillar=guard"
+      - "tss.purpose=automated-data-quality-validation"
+      - "tss.component=data-transformation"
+      - "tss.learning=Automatic data quality enforcement and validation"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - three-pillars-network
+
+  # ================================================
+  # [OBSERVABILITY PILLAR] Log Aggregation
+  # ================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tss-prometheus-observability
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    labels:
+      - "tss.pillar=observability"
+      - "tss.purpose=metrics-collection-and-storage"
+      - "tss.component=metrics-database"
+      - "tss.learning=Time-series metrics for system monitoring"
+    networks:
+      - three-pillars-network
+
+  # ================================================
+  # [GUARD PILLAR] Health Check Monitor
+  # ================================================
+  health-monitor:
+    image: nginx:alpine
+    container_name: tss-health-monitor-guard
+    ports:
+      - "8080:80"
+    volumes:
+      - ./monitoring/health-check:/usr/share/nginx/html
+    labels:
+      - "tss.pillar=guard"
+      - "tss.purpose=system-health-validation"
+      - "tss.component=health-checker"
+      - "tss.learning=Continuous health validation and alert generation"
+    depends_on:
+      - postgres
+      - grafana
+    networks:
+      - three-pillars-network
+
+  # ================================================
+  # [THREE PILLARS INTEGRATION] Demo Data Generator
+  # ================================================
+  data-generator:
+    image: python:3.11-slim
+    container_name: tss-data-generator
+    volumes:
+      - ./scripts:/app/scripts
+      - ./dbt/seeds:/app/data
+    working_dir: /app
+    command: /bin/bash -c "
+      echo 'Installing dependencies...' &&
+      pip install psycopg2-binary pandas faker > /dev/null 2>&1 &&
+      echo 'Starting Three Pillars data generation...' &&
+      python scripts/generate_demo_data.py"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=demo
+      - POSTGRES_PASSWORD=demo123
+      - POSTGRES_DB=lakehouse
+    labels:
+      - "tss.pillar=integration"
+      - "tss.purpose=demo-data-generation-for-learning"
+      - "tss.component=data-simulator"
+      - "tss.learning=Generate realistic scenarios for Three Pillars demonstration"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - three-pillars-network
+
+networks:
+  three-pillars-network:
+    driver: bridge
+    labels:
+      - "tss.purpose=isolated-network-for-three-pillars-demo"
+
+volumes:
+  postgres_data:
+    labels:
+      - "tss.pillar=code"
+      - "tss.purpose=persistent-data-storage"
+  grafana_data:
+    labels:
+      - "tss.pillar=observability"
+      - "tss.purpose=dashboard-configuration-persistence"
+  prometheus_data:
+    labels:
+      - "tss.pillar=observability"
+      - "tss.purpose=metrics-data-storage"
+
+# =======================================================
+# [LEARNING EXPERIENCE] Service Integration Notes
+# =======================================================
+# This Docker Compose demonstrates:
+#
+# CODE PILLAR Integration:
+# - PostgreSQL: Reliable, reproducible data foundation
+# - dbt: Consistent data transformation logic
+# - Predictable service startup and configuration
+#
+# OBSERVABILITY PILLAR Integration:
+# - Grafana: Real-time dashboard visualization
+# - Prometheus: Metrics collection and storage
+# - Health checks: Continuous service monitoring
+#
+# GUARD PILLAR Integration:
+# - dbt quality checks: Automated data validation
+# - Health monitor: System protection validation
+# - Network isolation: Security boundary enforcement
+#
+# THREE PILLARS SYNERGY:
+# - Services communicate through isolated network
+# - Health checks ensure reliable operation
+# - Data flows through quality validation pipeline
+# - Real-time monitoring provides complete visibility

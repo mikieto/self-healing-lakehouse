@@ -21,7 +21,7 @@ variable "environment" {
 variable "alert_email" {
   description = "Email address for self-healing alerts"
   type        = string
-  default     = "admin@example.com"
+  default     = "mikieto@gmail.com"
   sensitive   = true
 }
 

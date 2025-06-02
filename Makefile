@@ -290,7 +290,7 @@ cleanup-local:
 destroy:
 	@echo "⚠️  WARNING: This will destroy all AWS application resources!"
 	@read -p "Are you sure? [y/N] " response; \
-	if [[ "$response" =~ ^[Yy]$ ]]; then \
+	if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
 		echo "Destroying infrastructure..."; \
 		cd $(TERRAFORM_DIR) && terraform destroy -auto-approve; \
 		echo "✅ Infrastructure destroyed"; \
@@ -302,7 +302,7 @@ destroy:
 destroy-bootstrap:
 	@echo "⚠️  WARNING: This will destroy S3 Native Locking backend infrastructure!"
 	@read -p "Are you sure? [y/N] " response; \
-	if [[ "$$response" =~ ^[Yy]$$ ]]; then \
+	if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
 		echo "Destroying bootstrap..."; \
 		cd $(BOOTSTRAP_DIR) && terraform destroy -auto-approve && \
 		rm -f ../environments/dev/backend.hcl ../environments/staging/backend.hcl ../environments/prod/backend.hcl; \

@@ -54,14 +54,14 @@ jobs:
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
         working_directory: terraform/environments/dev
-        format: 'sarif'
+        additional_args: --format sarif --out results.sarif
         soft_fail: true
 
     - name: Upload security scan results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
-        sarif_file: tfsec.sarif
+        sarif_file: terraform/environments/dev/results.sarif
   
     - name: Terraform Plan
       id: plan

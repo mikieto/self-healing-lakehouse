@@ -20,19 +20,20 @@ locals {
   }
 }
 
-# ===== PROMETHEUS WORKSPACE =====
+# Only create Prometheus workspace in production
 resource "aws_prometheus_workspace" "main" {
+  count = var.environment == "prod" ? 1 : 0
   alias = local.observability_config.name_prefix
 
   logging_configuration {
-    log_group_arn = "${aws_cloudwatch_log_group.prometheus.arn}:*"
+    log_group_arn = "${aws_cloudwatch_log_group.prometheus[0].arn}:*"
   }
 
   tags = local.observability_config.tags
 }
 
-# CloudWatch Log Group for Prometheus
 resource "aws_cloudwatch_log_group" "prometheus" {
+  count             = var.environment == "prod" ? 1 : 0
   name              = "/aws/prometheus/${local.observability_config.name_prefix}"
   retention_in_days = 7
 
@@ -257,8 +258,8 @@ output "observability_enhanced" {
       id       = aws_grafana_workspace.main.id
     }
     prometheus = {
-      endpoint     = aws_prometheus_workspace.main.prometheus_endpoint
-      workspace_id = aws_prometheus_workspace.main.id
+      endpoint     = try(aws_prometheus_workspace.main[0].prometheus_endpoint, "not_enabled_in_dev")
+      workspace_id = try(aws_prometheus_workspace.main[0].id, "not_enabled_in_dev")
     }
     dashboards = {
       main     = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouseDashboard"

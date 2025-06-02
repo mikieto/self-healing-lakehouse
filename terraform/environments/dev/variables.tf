@@ -21,8 +21,13 @@ variable "environment" {
 variable "alert_email" {
   description = "Email address for self-healing alerts"
   type        = string
-  default     = "mikieto@gmail.com"
-  sensitive   = true
+  # Remove default - use TF_VAR_alert_email or terraform.tfvars
+  sensitive = true
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.alert_email))
+    error_message = "Alert email must be a valid email address."
+  }
 }
 
 # Removed unused variables:

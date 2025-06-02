@@ -16,18 +16,18 @@ output "terraform_state_bucket" {
 output "s3_native_backend_config" {
   description = "S3 Native Locking backend configuration"
   value = {
-    bucket         = module.s3_bucket.s3_bucket_id
-    key           = "environments/dev/terraform.tfstate"
-    region        = data.aws_region.current.name
-    encrypt       = true
-    use_lockfile  = true  # ← S3 Native Locking
+    bucket       = module.s3_bucket.s3_bucket_id
+    key          = "environments/dev/terraform.tfstate"
+    region       = data.aws_region.current.name
+    encrypt      = true
+    use_lockfile = true # ← S3 Native Locking
   }
 }
 
 # Ready-to-use backend.tf content
 output "backend_tf_content" {
   description = "Copy this content to terraform/environments/dev/backend.tf"
-  value = <<-EOT
+  value       = <<-EOT
     terraform {
       backend "s3" {
         bucket         = "${module.s3_bucket.s3_bucket_id}"
@@ -53,10 +53,10 @@ output "github_variables" {
 output "deployment_summary" {
   description = "S3 Native Locking deployment summary"
   value = {
-    state_bucket   = module.s3_bucket.s3_bucket_id
-    locking_method = "s3_native"
-    dynamodb_table = "none_required"
-    cost_savings   = "~$0.25/month (no DynamoDB)"
+    state_bucket      = module.s3_bucket.s3_bucket_id
+    locking_method    = "s3_native"
+    dynamodb_table    = "none_required"
+    cost_savings      = "~$0.25/month (no DynamoDB)"
     terraform_version = ">= 1.6 required"
   }
 }

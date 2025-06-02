@@ -4,7 +4,7 @@
 
 terraform {
   required_version = ">= 1.6"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -35,16 +35,16 @@ resource "random_id" "suffix" {
 # =======================================================
 
 module "s3_bucket" {
-  source = "terraform-aws-modules/s3-bucket/aws"
+  source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.0"
 
   bucket = "${var.project_name}-terraform-state-${random_id.suffix.hex}"
-  
+
   # S3 Native Locking Configuration
   versioning = {
     enabled = true
   }
-  
+
   server_side_encryption_configuration = {
     rule = {
       apply_server_side_encryption_by_default = {
@@ -52,15 +52,15 @@ module "s3_bucket" {
       }
     }
   }
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-  
+
   tags = {
-    Name = "Terraform State Bucket"
-    Project = var.project_name
+    Name          = "Terraform State Bucket"
+    Project       = var.project_name
     LockingMethod = "s3_native"
   }
 }
@@ -70,19 +70,19 @@ module "s3_bucket" {
 # =======================================================
 
 module "iam_github_oidc_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-github-oidc-role"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-github-oidc-role"
   version = "~> 5.0"
 
   name = "GitHubActionsRole-${random_id.suffix.hex}"
-  
+
   subjects = ["repo:${var.github_repository}:*"]
-  
+
   policies = {
     LakehouseFullAccess = aws_iam_policy.github_actions_permissions.arn
   }
 
   tags = {
-    Name = "GitHub Actions Role"
+    Name    = "GitHub Actions Role"
     Project = var.project_name
   }
 }
@@ -90,7 +90,7 @@ module "iam_github_oidc_role" {
 # Custom policy for lakehouse permissions
 resource "aws_iam_policy" "github_actions_permissions" {
   name = "github-actions-lakehouse-policy-${random_id.suffix.hex}"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -100,19 +100,19 @@ resource "aws_iam_policy" "github_actions_permissions" {
           # Core AWS services for lakehouse
           "ec2:*", "s3:*", "rds:*", "glue:*", "events:*",
           "logs:*", "cloudwatch:*", "sns:*", "lambda:*", "kms:*",
-          
+
           # IAM permissions
           "iam:GetRole", "iam:CreateRole", "iam:DeleteRole",
-          "iam:AttachRolePolicy", "iam:DetachRolePolicy", 
+          "iam:AttachRolePolicy", "iam:DetachRolePolicy",
           "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:PassRole",
           "iam:TagRole", "iam:UntagRole", "iam:List*", "iam:Get*",
           "iam:CreatePolicy", "iam:DeletePolicy",
           "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile",
           "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile",
-          
+
           # Additional services
           "secretsmanager:*", "aps:*", "grafana:*", "lakeformation:*",
-          "application-autoscaling:*", "elasticloadbalancing:*", 
+          "application-autoscaling:*", "elasticloadbalancing:*",
           "autoscaling:*", "ssm:*", "sts:GetCallerIdentity"
         ]
         Resource = "*"
@@ -121,7 +121,7 @@ resource "aws_iam_policy" "github_actions_permissions" {
   })
 
   tags = {
-    Name = "GitHub Actions Lakehouse Policy"
+    Name    = "GitHub Actions Lakehouse Policy"
     Project = var.project_name
   }
 }
@@ -143,7 +143,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 
   tags = {
-    Name = "GitHub Actions OIDC Provider"
+    Name    = "GitHub Actions OIDC Provider"
     Project = var.project_name
   }
 }
@@ -154,8 +154,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 resource "aws_lakeformation_data_lake_settings" "main" {
   admins = [
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",  # Account root
-    module.iam_github_oidc_role.arn        # GitHub Actions Role
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root", # Account root
+    module.iam_github_oidc_role.arn                                     # GitHub Actions Role
   ]
 
   create_database_default_permissions {

@@ -10,7 +10,7 @@ locals {
   bucket_id           = module.lakehouse_storage.s3_bucket_id
   bucket_arn          = module.lakehouse_storage.s3_bucket_arn
   grafana_endpoint    = aws_grafana_workspace.main.endpoint
-  prometheus_endpoint = aws_prometheus_workspace.main.prometheus_endpoint
+  prometheus_endpoint = try(aws_prometheus_workspace.main[0].prometheus_endpoint, "not_enabled_in_dev")
 }
 # === CORE INFRASTRUCTURE ===
 output "data_lake_bucket_name" {

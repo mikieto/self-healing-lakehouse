@@ -1,312 +1,141 @@
-# Makefile for Self-Healing Lakehouse
-# Learner-friendly enterprise automation with S3 Native Locking
-
-.PHONY: help setup warm bootstrap setup-backend plan apply destroy verify cleanup-local destroy-bootstrap
-.PHONY: validate security status check-deps local-logs local-stop
+# Enterprise Self-Healing Data Lakehouse
+# AWS Official Modules + Zero Custom Code
+.PHONY: help check bootstrap plan apply fmt validate clean
 .DEFAULT_GOAL := help
 
-# Configuration - Fix actual directory structure
-TERRAFORM_DIR := terraform/environments/dev
+# Configuration
 BOOTSTRAP_DIR := terraform/bootstrap
-LOCAL_DEV_DIR := local-dev
-SCRIPTS_DIR := terraform/scripts
-ENVIRONMENT ?= dev
-AWS_REGION ?= us-east-1
-ALERT_EMAIL ?= $(shell git config user.email)
+ENV_DIR := terraform/environments/dev
 
-## Show help with enterprise features
+# Load .env file if it exists
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
+## What you can do and how to do it
 help:
-	@echo "🏗️  Technical Survival Strategy - Enterprise Edition"
-	@echo "=============================================="
+	@echo "🚀 Self-Healing Data Lakehouse"
+	@echo "=============================="
 	@echo ""
-	@echo "📋 Core Workflow:"
-	@echo "setup                Setup environment"
-	@echo "warm                 Local environment experience"  
-	@echo "bootstrap            Bootstrap S3 Native Locking backend"
-	@echo "setup-backend        Setup backend config from bootstrap"
-	@echo "plan                 Plan Terraform deployment"
-	@echo "apply                Deploy to AWS with Terraform"
-	@echo "verify               Verify Technical Survival Strategy"
+	@echo "💡 What you can build:"
+	@echo "  📊 Enterprise data lakehouse with automatic healing"
+	@echo "  🏗️ 70+ AWS resources using official modules only"
+	@echo "  🛡️ Production-ready security and monitoring"
 	@echo ""
-	@echo "🛡️  Enterprise Features:"
-	@echo "check-deps           Check system dependencies"
-	@echo "validate             Validate Terraform configuration"
-	@echo "security             Run security scanning"
-	@echo "status               Show current infrastructure status"
+	@echo "⚡ How to build it:"
+	@echo "  make check        Check all prerequisites"
+	@echo "  make bootstrap    Setup AWS backend (3 min)"
+	@echo "  make plan         Review what will be created"
+	@echo "  make apply        Build the lakehouse (10 min)"
+	@echo "  make clean        Remove everything"
 	@echo ""
-	@echo "🧹 Maintenance:"
-	@echo "cleanup-local        Stop local containers"
-	@echo "destroy              Destroy AWS resources"
-	@echo "destroy-bootstrap    Destroy bootstrap infrastructure"
+	@echo "🔧 Development commands:"
+	@echo "  make fmt          Format Terraform code"
+	@echo "  make validate     Validate Terraform syntax"
 	@echo ""
-	@echo "🎯 Quick Start:"
-	@echo "  make setup → make warm → make bootstrap → make plan → make apply"
+	@echo "📋 Prerequisites:"
+	@echo "  1. Copy: cp .env.sample .env"
+	@echo "  2. Edit: Add your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+	@echo "  3. Check: make check"
+	@echo ""
+	@echo "🎯 Safe workflow:"
+	@echo "  1. make check"
+	@echo "  2. make bootstrap"
+	@echo "  3. make plan      ← Review before applying"
+	@echo "  4. make apply     ← Only after plan review"
 
-## Check system dependencies
-check-deps:
-	@echo "Checking system dependencies..."
-	@command -v terraform >/dev/null 2>&1 || { echo "❌ Terraform not found. Install from https://terraform.io"; exit 1; }
-	@command -v aws >/dev/null 2>&1 || { echo "❌ AWS CLI not found. Install from https://aws.amazon.com/cli/"; exit 1; }
-	@command -v docker >/dev/null 2>&1 || { echo "❌ Docker not found. Install from https://docker.com"; exit 1; }
-	@command -v jq >/dev/null 2>&1 || { echo "❌ jq not found. Install jq for JSON processing"; exit 1; }
-	@echo "✅ All dependencies available"
-
-## Setup Terraform environment with validation
-setup: check-deps
-	@echo "Setting up Technical Survival Strategy environment..."
-	@terraform --version
-	@aws --version
-	@pip install dbt-postgres==1.8.* boto3 awscli PyYAML >/dev/null 2>&1 || echo "⚠️  Some Python packages failed to install"
-	@echo "✅ Setup complete"
-
-## Setup backend configuration from bootstrap (with cleanup)
-setup-backend:
-	@echo "🔧 Setting up Terraform backend for $(ENVIRONMENT)..."
-	@if [ ! -d "$(BOOTSTRAP_DIR)" ]; then \
-		echo "❌ Bootstrap directory not found. Run 'make bootstrap' first."; \
+## Check all prerequisites
+check:
+	@echo "🔍 Checking prerequisites..."
+	@echo ""
+	@echo "📋 Required tools:"
+	@command -v terraform >/dev/null 2>&1 && echo "  ✅ Terraform installed" || { echo "  ❌ Terraform missing - Install from https://terraform.io"; exit 1; }
+	@command -v aws >/dev/null 2>&1 && echo "  ✅ AWS CLI installed" || { echo "  ❌ AWS CLI missing - Install from https://aws.amazon.com/cli/"; exit 1; }
+	@command -v jq >/dev/null 2>&1 && echo "  ✅ jq installed" || { echo "  ❌ jq missing - Install with: brew install jq (Mac) or apt install jq (Linux)"; exit 1; }
+	@echo ""
+	@echo "🔐 AWS credentials:"
+	@if [ -n "$(AWS_ACCESS_KEY_ID)" ] && [ -n "$(AWS_SECRET_ACCESS_KEY)" ]; then \
+		echo "  ✅ AWS credentials found in environment"; \
+		aws sts get-caller-identity >/dev/null 2>&1 && echo "  ✅ AWS credentials valid" || echo "  ❌ AWS credentials invalid"; \
+	else \
+		echo "  ❌ AWS credentials missing"; \
+		echo "     Please copy .env.sample to .env and add your credentials"; \
 		exit 1; \
 	fi
-	@if [ ! -d "$(TERRAFORM_DIR)" ]; then \
-		echo "❌ Environment directory not found: $(TERRAFORM_DIR)"; \
-		exit 1; \
-	fi
-	@echo "📋 Retrieving bootstrap configuration..."
+	@echo ""
+	@echo "📁 Project structure:"
+	@[ -d "$(BOOTSTRAP_DIR)" ] && echo "  ✅ Bootstrap directory exists" || { echo "  ❌ Missing $(BOOTSTRAP_DIR)"; exit 1; }
+	@[ -d "$(ENV_DIR)" ] && echo "  ✅ Environment directory exists" || { echo "  ❌ Missing $(ENV_DIR)"; exit 1; }
+	@echo ""
+	@echo "✅ All prerequisites met! Ready to run 'make bootstrap'"
+
+## Setup AWS backend infrastructure
+bootstrap:
+	@echo "🔧 Setting up AWS backend..."
+	@make check
+	@cd $(BOOTSTRAP_DIR) && terraform init && terraform apply -auto-approve
 	@cd $(BOOTSTRAP_DIR) && \
 		BUCKET=$$(terraform output -raw terraform_state_bucket) && \
-		REGION=$$(terraform output -json s3_native_backend_config | jq -r '.region') && \
-		if [ -z "$$BUCKET" ] || [ -z "$$REGION" ]; then \
-			echo "❌ Failed to retrieve bootstrap outputs"; \
-			exit 1; \
-		fi && \
-		echo "   Bucket: $$BUCKET" && \
-		echo "   Region: $$REGION" && \
-		cd ../environments/$(ENVIRONMENT) && \
-		echo "📝 Generating backend.hcl for $(ENVIRONMENT)..." && \
-		echo "# Auto-generated backend configuration" > backend.hcl && \
-		echo "# Generated on: $$(date)" >> backend.hcl && \
-		echo "# Environment: $(ENVIRONMENT)" >> backend.hcl && \
-		echo "# Bootstrap bucket: $$BUCKET" >> backend.hcl && \
-		echo "" >> backend.hcl && \
-		echo "bucket         = \"$$BUCKET\"" >> backend.hcl && \
-		echo "key            = \"env/$(ENVIRONMENT)/terraform.tfstate\"" >> backend.hcl && \
-		echo "region         = \"$$REGION\"" >> backend.hcl && \
-		echo "encrypt        = true" >> backend.hcl && \
-		echo "use_lockfile   = true" >> backend.hcl
-	@echo "✅ Backend configuration created: $(TERRAFORM_DIR)/backend.hcl"
-	@echo "🧹 Cleaning old Terraform cache..."
-	@cd $(TERRAFORM_DIR) && rm -rf .terraform .terraform.lock.hcl
-	@echo "🚀 Initializing Terraform with new backend..."
-	@cd $(TERRAFORM_DIR) && terraform init -backend-config=backend.hcl
-	@echo "✅ Terraform backend setup complete!"
-	@echo "📊 You can now run: make plan"
+		cd ../environments/dev && \
+		echo "bucket = \"$$BUCKET\"" > backend.hcl && \
+		echo "key = \"terraform.tfstate\"" >> backend.hcl && \
+		echo "region = \"$(shell aws configure get region)\"" >> backend.hcl && \
+		echo "encrypt = true" >> backend.hcl
+	@echo "✅ Backend ready. Next: make plan"
 
-## Bootstrap S3 Native Locking backend
-bootstrap: check-deps
-	@echo "🏗️  Bootstrapping S3 Native Locking backend infrastructure..."
-	@if [ -z "$${AWS_ACCESS_KEY_ID}" ] && [ ! -f ~/.aws/credentials ]; then echo "❌ AWS credentials not configured"; exit 1; fi
-	
-	# Check for existing bootstrap
-	@if [ -f $(TERRAFORM_DIR)/backend.hcl ]; then \
-		echo "✅ Bootstrap already completed"; \
-		echo "   Backend file exists: $(TERRAFORM_DIR)/backend.hcl"; \
-		echo "📋 Current backend configuration:"; \
-		cat $(TERRAFORM_DIR)/backend.hcl | grep -E "bucket|key" | sed 's/^/   /'; \
-		echo ""; \
-		echo "Next: make warm → make plan → make apply"; \
-		exit 0; \
-	fi
-	
-	# Deploy bootstrap infrastructure
-	@echo "🚀 Deploying S3 Native Locking bootstrap..." && \
-	cd $(BOOTSTRAP_DIR) && \
-	terraform init && \
-	terraform plan && \
-	terraform apply -auto-approve
-	
-	# Setup backend automatically
-	@echo "" && \
-	make setup-backend
-	
-	@echo ""
-	@echo "🎉 S3 Native Locking bootstrap complete!"
-	@echo "📊 Infrastructure Summary:"
-	@cd $(BOOTSTRAP_DIR) && \
-	echo "   State Bucket: $$(terraform output -raw terraform_state_bucket)" && \
-	echo "   GitHub Role: $$(terraform output -raw github_actions_role_arn)" && \
-	echo "   Locking: S3 Native (no DynamoDB required)" && \
-	echo "   Cost Savings: ~$$0.25/month"
-	@echo ""
-	@echo "🎯 Next Steps:"
-	@echo "   1. Set GitHub Variables:"
-	@cd $(BOOTSTRAP_DIR) && terraform output github_variables
-	@echo "   2. make warm  (local experience)"
-	@echo "   3. make plan  (review AWS changes)"
-	@echo "   4. make apply (deploy to AWS)"
-
-## Local environment experience
-warm:
-	@echo "Starting local Technical Survival Strategy demo..."
-	@if [ ! -d "$(LOCAL_DEV_DIR)" ]; then echo "❌ local-dev directory not found"; exit 1; fi
-	@if [ ! -f "$(LOCAL_DEV_DIR)/docker-compose.yml" ]; then echo "❌ docker-compose.yml not found"; exit 1; fi
-	
-	# Start containers if not running
-	@if docker compose -f $(LOCAL_DEV_DIR)/docker-compose.yml ps | grep -q "Up"; then \
-		echo "✅ Local environment already running"; \
-		docker compose -f $(LOCAL_DEV_DIR)/docker-compose.yml ps; \
-	else \
-		echo "Starting local services..."; \
-		docker compose -f $(LOCAL_DEV_DIR)/docker-compose.yml up -d postgres grafana; \
-	fi
-	
-	# Initialize data
-	@echo "Waiting for services (15s)..."; sleep 15
-	@echo "Loading seed data..."
-	@cd $(LOCAL_DEV_DIR) && docker compose run --rm dbt seed
-	@echo "Running dbt transformations..."
-	@cd $(LOCAL_DEV_DIR) && docker compose run --rm dbt run
-	@cd $(LOCAL_DEV_DIR) && docker compose run --rm dbt test
-	@echo "✅ Local demo complete!"
-	@echo ""
-	@echo "🎉 Technical Survival Strategy foundations ready:"
-	@echo "Grafana: http://localhost:3000 (admin/admin)"
-	@echo "PostgreSQL: localhost:5432 (demo/demo123)"
-	@echo "Query: SELECT pillar, health_percentage FROM local_analytics.mart_survival_metrics;"
-	@echo ""
-	@echo "Next: 'make bootstrap' → 'make plan' → 'make apply' for AWS deployment!"
+## Format Terraform code
+fmt:
+	@echo "🎨 Formatting Terraform code..."
+	@terraform fmt -recursive terraform/
+	@echo "✅ Code formatted"
 
 ## Validate Terraform configuration
 validate:
 	@echo "🔍 Validating Terraform configuration..."
-	@if [ ! -f $(TERRAFORM_DIR)/backend.hcl ]; then echo "❌ Run 'make bootstrap' first"; exit 1; fi
-	@cd $(TERRAFORM_DIR) && terraform init -backend-config=backend.hcl >/dev/null 2>&1
-	@cd $(TERRAFORM_DIR) && terraform validate
-	@echo "✅ Terraform configuration is valid"
-	@echo "ℹ️  Note: Some files may need formatting. Run 'terraform fmt' to fix."
+	@[ -f $(ENV_DIR)/backend.hcl ] || { echo "❌ Run 'make bootstrap' first"; exit 1; }
+	@cd $(ENV_DIR) && terraform init -backend-config=backend.hcl >/dev/null
+	@cd $(ENV_DIR) && terraform validate
+	@echo "✅ Configuration valid"
 
-## Run security scanning
-security:
-	@echo "Running security scan..."
-	@if [ -f "$(SCRIPTS_DIR)/security-scan.sh" ]; then \
-		chmod +x $(SCRIPTS_DIR)/security-scan.sh; \
-		$(SCRIPTS_DIR)/security-scan.sh; \
-	else \
-		echo "⚠️  Security scan script not found - running basic checks"; \
-		make validate; \
-	fi
-
-## Plan Terraform deployment
+## Show what will be created (safe to run)
 plan:
-	@echo "📋 Planning Terraform deployment..."
-	@if [ ! -f $(TERRAFORM_DIR)/backend.hcl ]; then \
-		echo "❌ Backend not configured. Run 'make bootstrap' first"; exit 1; \
-	fi
-	@cd $(TERRAFORM_DIR) && terraform init -backend-config=backend.hcl
-	@cd $(TERRAFORM_DIR) && terraform plan
-	@echo "✅ Plan complete. Review changes above, then run 'make apply'"
-
-## Deploy to AWS with Terraform
-apply:
-	@echo "🚀 Deploying Technical Survival Strategy to AWS..."
-	@if [ ! -f $(TERRAFORM_DIR)/backend.hcl ]; then \
-		echo "❌ Backend not configured. Run 'make bootstrap' first"; exit 1; \
-	fi
-	@cd $(TERRAFORM_DIR) && terraform init -backend-config=backend.hcl && terraform apply -auto-approve
-	@echo "✅ AWS deployment complete!"
-	@echo "📊 Run 'terraform output' in $(TERRAFORM_DIR) to see created resources"
-
-## Verify Technical Survival Strategy
-verify:
-	@echo "Verifying Technical Survival Strategy implementation..."
-	
-	# Check Terraform state
-	@if [ -f $(TERRAFORM_DIR)/backend.hcl ]; then \
-		cd $(TERRAFORM_DIR) && terraform validate >/dev/null 2>&1 && echo "✅ Terraform Configuration Valid"; \
-	else \
-		echo "⚠️  Backend not configured, run 'make bootstrap' first"; \
-	fi
-	
-	# Check local environment
-	@if docker compose -f $(LOCAL_DEV_DIR)/docker-compose.yml ps | grep -q postgres; then \
-		echo "✅ Local Environment Ready"; \
-	else \
-		echo "⚠️  Run 'make warm' for local environment"; \
-	fi
-	
-	# Check AWS resources
-	@if [ -f $(TERRAFORM_DIR)/.terraform/terraform.tfstate ] || \
-	   [ -f $(TERRAFORM_DIR)/terraform.tfstate ]; then \
-		echo "✅ AWS Infrastructure Deployed"; \
-	else \
-		echo "⚠️  No AWS deployment found - run 'make apply'"; \
-	fi
-	
+	@echo "📋 Planning lakehouse deployment..."
+	@[ -f $(ENV_DIR)/backend.hcl ] || { echo "❌ Run 'make bootstrap' first"; exit 1; }
+	@cd $(ENV_DIR) && terraform init -backend-config=backend.hcl
+	@cd $(ENV_DIR) && terraform plan
 	@echo ""
-	@echo "🎯 Technical Survival Strategy Status:"
-	@echo "Code Pillar: S3 Native Locking IaC ✅"
-	@echo "Observability Pillar: AWS official module integration ✅"
-	@echo "Guard Pillar: Glue DQ + EventBridge self-healing ✅"
+	@echo "💡 Review the plan above. If it looks good, run: make apply"
 
-## Show current infrastructure status
-status:
-	@echo "📊 Checking infrastructure status..."
-	@if [ -d "$(TERRAFORM_DIR)" ]; then \
-		echo "Changing to $(TERRAFORM_DIR)..."; \
-		cd $(TERRAFORM_DIR) && \
-		if [ -f "backend.hcl" ]; then \
-			echo "✅ Backend configured"; \
-			cat backend.hcl | grep -E "bucket|key" | sed 's/^/   /'; \
-			echo ""; \
-			if terraform init -backend-config=backend.hcl >/dev/null 2>&1; then \
-				RESOURCE_COUNT=$$(terraform show -json 2>/dev/null | jq -r '.values.root_module.resources[]?.address' 2>/dev/null | wc -l); \
-				echo "Managed resources: $$RESOURCE_COUNT"; \
-				echo ""; \
-				terraform output 2>/dev/null | head -10; \
-			else \
-				echo "⚠️  Terraform not initialized"; \
-			fi; \
-		else \
-			echo "⚠️  No backend configuration found"; \
-			echo "Run 'make bootstrap' to create infrastructure"; \
+## Deploy the lakehouse to AWS (requires plan review)
+apply:
+	@echo "🚀 Deploying lakehouse..."
+	@[ -f $(ENV_DIR)/backend.hcl ] || { echo "❌ Run 'make bootstrap' first"; exit 1; }
+	@echo "⚠️  This will create real AWS resources and incur costs"
+	@read -p "Did you review the plan? Continue? [y/N] " confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		cd $(ENV_DIR) && terraform init -backend-config=backend.hcl; \
+		cd $(ENV_DIR) && terraform apply; \
+		echo "✅ Lakehouse deployed!"; \
+		echo "🎯 Check AWS Console for your resources"; \
+	else \
+		echo "❌ Deployment cancelled. Run 'make plan' first"; \
+	fi
+
+## Remove all AWS resources
+clean:
+	@echo "🧹 Cleaning up AWS resources..."
+	@echo "⚠️  This will destroy all infrastructure and data"
+	@read -p "Are you sure? [y/N] " confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		if [ -f $(ENV_DIR)/backend.hcl ]; then \
+			cd $(ENV_DIR) && terraform destroy; \
 		fi; \
+		if [ -d $(BOOTSTRAP_DIR) ]; then \
+			cd $(BOOTSTRAP_DIR) && terraform destroy; \
+		fi; \
+		rm -f $(ENV_DIR)/backend.hcl; \
+		echo "✅ All resources destroyed"; \
 	else \
-		echo "⚠️  Terraform directory not found: $(TERRAFORM_DIR)"; \
-	fi
-
-## View local development logs
-local-logs:
-	@echo "Showing local development logs..."
-	@cd $(LOCAL_DEV_DIR) && docker compose logs -f
-
-## Stop local development environment
-local-stop: cleanup-local
-
-## Stop local containers
-cleanup-local:
-	@echo "Stopping local containers..."
-	@cd $(LOCAL_DEV_DIR) && docker compose down -v
-	@echo "✅ Local cleanup complete"
-
-## Destroy AWS resources
-destroy:
-	@echo "⚠️  WARNING: This will destroy all AWS application resources!"
-	@read -p "Are you sure? [y/N] " response; \
-	if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
-		echo "Destroying infrastructure..."; \
-		cd $(TERRAFORM_DIR) && terraform destroy -auto-approve; \
-		echo "✅ Infrastructure destroyed"; \
-	else \
-		echo "Destroy cancelled"; \
-	fi
-
-## Destroy bootstrap infrastructure
-destroy-bootstrap:
-	@echo "⚠️  WARNING: This will destroy S3 Native Locking backend infrastructure!"
-	@read -p "Are you sure? [y/N] " response; \
-	if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
-		echo "Destroying bootstrap..."; \
-		cd $(BOOTSTRAP_DIR) && terraform destroy -auto-approve && \
-		rm -f ../environments/dev/backend.hcl ../environments/staging/backend.hcl ../environments/prod/backend.hcl; \
-		echo "✅ Bootstrap destroyed"; \
-	else \
-		echo "Destroy cancelled"; \
+		echo "❌ Cleanup cancelled"; \
 	fi

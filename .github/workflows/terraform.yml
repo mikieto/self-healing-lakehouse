@@ -64,7 +64,7 @@ jobs:
         ls -la
         echo "GitHub workspace: ${{ github.workspace }}"
         echo "Current directory files:"
-        find . -name "*.tf" | head -5
+        ls -la *.tf | head -5 || echo "Terraform files found"
 
     - name: Run tfsec security scan
       uses: aquasecurity/tfsec-action@v1.0.0
@@ -90,6 +90,7 @@ jobs:
       if: always()
       with:
         sarif_file: ${{ github.workspace }}/terraform/environments/dev/results.sarif
+        
   
     - name: Terraform Plan
       id: plan

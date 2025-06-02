@@ -4,63 +4,86 @@
 # Environment Variables (SECURITY CRITICAL)
 # ===========================================
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.sample
+*.env
 
 # ===========================================
-# Terraform State Files (SECURITY CRITICAL)
+# Terraform (SECURITY CRITICAL)
 # ===========================================
+# State files
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
+
+# Plan files
 *.tfplan
 *.tfplan.*
+
+# Cache and modules
 .terraform/
+**/.terraform/
 .terraform.lock.hcl
 
+# Variable files (may contain sensitive data)
+terraform.tfvars
+*.auto.tfvars
+*.tfvars
+
 # ===========================================
-# AWS Credentials
+# AWS Credentials (SECURITY CRITICAL)
 # ===========================================
 .aws/
 aws-credentials.json
 credentials.json
+**/aws-credentials.json
+**/credentials.json
 
 # ===========================================
 # dbt Generated Files
 # ===========================================
-dbt/target/
-dbt/dbt_packages/
-dbt/logs/
+# Generated in local-dev/dbt/
+local-dev/dbt/target/
+local-dev/dbt/logs/
+local-dev/dbt/dbt_packages/
+local-dev/dbt/profiles/.user.yml
+
+# Generic dbt patterns
+**/dbt/target/
+**/dbt/logs/
+**/dbt/dbt_packages/
+profiles/.user.yml
 
 # ===========================================
 # Docker & Compose
 # ===========================================
 docker-compose.override.yml
+.dockerignore
 
 # ===========================================
-# IDE & Editor Files
+# Build Artifacts & Archives
 # ===========================================
-.vscode/settings.json
-.idea/
-*.swp
-*.swo
-*~
+*.zip
+*.tar.gz
+*.rar
+dist/
+build/
+*.backup
 
 # ===========================================
-# OS Generated Files
+# Database Files
 # ===========================================
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+*.db
+*.sqlite
+*.sqlite3
 
 # ===========================================
-# Logs
+# Logs & Monitoring
 # ===========================================
 *.log
 logs/
+**/logs/
+*.out
 
 # ===========================================
 # Python
@@ -70,14 +93,86 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 env/
 venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # ===========================================
-# Node.js (if any)
+# Node.js (if any monitoring tools)
 # ===========================================
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ===========================================
+# IDE & Editor Files
+# ===========================================
+# VSCode
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ===========================================
+# OS Generated Files
+# ===========================================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Windows
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Linux
+.directory
+.Trash-*
 
 # ===========================================
 # Temporary Files
@@ -85,27 +180,45 @@ npm-debug.log*
 *.tmp
 *.temp
 .cache/
-# Terraform
-**/.terraform/
-*.tfstate
-*.tfstate.*
+.temp/
+temp/
 
-# dbt
-dbt/target/
-dbt/logs/
+# ===========================================
+# Security & Certificates
+# ===========================================
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.jks
+secrets/
+**/secrets/
 
-# Build artifacts
-*.zip
-dist/
+# ===========================================
+# Monitoring & Observability
+# ===========================================
+# Prometheus
+prometheus/data/
+alertmanager/data/
 
-# Environment
-.env
-.env.local
+# Grafana
+grafana/data/
+grafana/logs/
 
-# IDE
-.vscode/
-.idea/
+# ===========================================
+# Data Files (Large)
+# ===========================================
+*.parquet
+*.avro
+data/
+**/data/
+*.csv.gz
 
-# Python
-__pycache__/
-*.pyc
+# ===========================================
+# Backup Files
+# ===========================================
+*.bak
+*.backup
+*.old
+*.orig

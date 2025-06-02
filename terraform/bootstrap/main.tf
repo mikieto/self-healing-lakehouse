@@ -154,7 +154,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 resource "aws_lakeformation_data_lake_settings" "main" {
   admins = [
-    data.aws_caller_identity.current.arn,  # Current user (mikieto)
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root",  # Account root
     module.iam_github_oidc_role.arn        # GitHub Actions Role
   ]
 
@@ -171,5 +171,4 @@ resource "aws_lakeformation_data_lake_settings" "main" {
   trusted_resource_owners = [
     data.aws_caller_identity.current.account_id
   ]
-  
 }

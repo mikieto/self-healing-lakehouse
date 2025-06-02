@@ -1,13 +1,5 @@
-# ===========================================
-# [GUARD PILLAR] Event-Driven Protection
-# ===========================================
-# Purpose: Automatic response to system events and anomalies
-# Benefit: Immediate reaction to problems without human intervention
-# Three Pillars Role: Autonomous system protection and recovery
-# Learning Value: Demonstrates event-driven automation patterns
-
-# terraform/environments/dev/eventbridge.tf
-# Minimal EventBridge configuration for self-healing
+# eventbridge.tf - Conflict Resolution Version
+# EventBridge configuration with unique naming to avoid conflicts
 
 # EventBridge rule for S3 events
 module "self_healing_eventbridge" {
@@ -15,6 +7,10 @@ module "self_healing_eventbridge" {
   version = "~> 3.0"
   
   create_bus = false  # Use default event bus
+  
+  # Unique IAM role name to avoid conflicts
+  create_role = true
+  role_name   = "eventbridge-role-${random_id.bucket_suffix.hex}"  # Unique naming
   
   rules = {
     new_data_uploaded = {
@@ -61,7 +57,7 @@ module "self_healing_eventbridge" {
   }
   
   tags = {
-    Name    = "lakehouse-self-healing"
+    Name    = "lakehouse-self-healing-${random_id.bucket_suffix.hex}"
     Purpose = "self-healing-notifications"
   }
 }

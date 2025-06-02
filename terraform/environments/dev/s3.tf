@@ -13,18 +13,18 @@
 module "lakehouse_storage" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.0"
-  
+
   bucket = "lakehouse-data-${random_id.bucket_suffix.hex}"
-  
+
   versioning = {
     enabled = true
   }
-  
+
   lifecycle_rule = [
     {
       id     = "data_lifecycle"
       status = "Enabled"
-      
+
       transition = [
         {
           days          = 30
@@ -37,14 +37,14 @@ module "lakehouse_storage" {
       ]
     }
   ]
-  
+
   # EventBridge notifications are handled by a separate resource
   # notification = {
   #   eventbridge = {
   #     enabled = true
   #   }
   # }
-  
+
   tags = {
     "Purpose"    = "self-healing-lakehouse"
     "FIS-Target" = "true"
@@ -60,7 +60,7 @@ resource "aws_s3_bucket_notification" "lakehouse_events" {
 # Lake Formation Data Lake Settings (simplified)
 resource "aws_lakeformation_data_lake_settings" "lakehouse" {
   admins = [data.aws_caller_identity.current.arn]
-  
+
   # Simplified configuration without default permissions
   trusted_resource_owners = [data.aws_caller_identity.current.account_id]
 }

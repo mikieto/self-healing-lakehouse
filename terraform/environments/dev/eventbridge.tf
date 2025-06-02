@@ -5,17 +5,17 @@
 module "self_healing_eventbridge" {
   source  = "terraform-aws-modules/eventbridge/aws"
   version = "~> 3.0"
-  
-  create_bus = false  # Use default event bus
-  
+
+  create_bus = false # Use default event bus
+
   # Unique IAM role name to avoid conflicts
   create_role = true
-  role_name   = "eventbridge-role-${random_id.bucket_suffix.hex}"  # Unique naming
-  
+  role_name   = "eventbridge-role-${random_id.bucket_suffix.hex}" # Unique naming
+
   rules = {
     new_data_uploaded = {
       description = "Detect new data files for quality checking"
-      
+
       event_pattern = jsonencode({
         source      = ["aws.s3"]
         detail-type = ["Object Created"]
@@ -30,11 +30,11 @@ module "self_healing_eventbridge" {
           }
         }
       })
-      
+
       enabled = true
     }
   }
-  
+
   targets = {
     new_data_uploaded = [
       {
@@ -55,7 +55,7 @@ module "self_healing_eventbridge" {
       }
     ]
   }
-  
+
   tags = {
     Name    = "lakehouse-self-healing-${random_id.bucket_suffix.hex}"
     Purpose = "self-healing-notifications"

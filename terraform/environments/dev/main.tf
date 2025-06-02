@@ -7,12 +7,12 @@
 # terraform/environments/dev/main.tf
 terraform {
   required_version = ">= 1.7"
-  
+
   # S3 backend configuration
   backend "s3" {
     # Configuration is provided via backend.hcl file
   }
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -27,7 +27,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   # Default tags for all resources
   default_tags {
     tags = {

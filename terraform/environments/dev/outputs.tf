@@ -7,9 +7,9 @@
 # Output values for infrastructure components (DRY principle applied)
 locals {
   # Common references to avoid repetition
-  bucket_id = module.lakehouse_storage.s3_bucket_id
-  bucket_arn = module.lakehouse_storage.s3_bucket_arn
-  grafana_endpoint = aws_grafana_workspace.main.endpoint
+  bucket_id           = module.lakehouse_storage.s3_bucket_id
+  bucket_arn          = module.lakehouse_storage.s3_bucket_arn
+  grafana_endpoint    = aws_grafana_workspace.main.endpoint
   prometheus_endpoint = aws_prometheus_workspace.main.prometheus_endpoint
 }
 # === CORE INFRASTRUCTURE ===
@@ -47,13 +47,13 @@ output "automation" {
   description = "Self-healing automation components"
   value = {
     eventbridge_rule = module.self_healing_eventbridge.eventbridge_rule_arns["new_data_uploaded"]
-    sns_topic       = module.healing_alerts_sns.topic_arn
+    sns_topic        = module.healing_alerts_sns.topic_arn
   }
 }
 # === QUICK START GUIDE ===
 output "quick_start" {
   description = "Quick start information"
-  value = "Self-Healing Lakehouse deployed. Check AWS console for resources."
+  value       = "Self-Healing Lakehouse deployed. Check AWS console for resources."
 }
 # === TECHNICAL DETAILS ===
 output "architecture_info" {
@@ -65,12 +65,12 @@ output "architecture_info" {
       eventbridge = "terraform-aws-modules/eventbridge/aws ~> 3.0"
     }
     architecture = {
-      data_layer      = "S3 + Lake Formation + Glue Catalog"
-      processing      = "Glue Crawler + Data Quality + Remediation Jobs"
-      monitoring      = "Prometheus + Grafana + CloudWatch"
-      automation      = "EventBridge + SNS + Bash Scripts"
-      chaos_testing   = "S3 corruption injection + monitoring"
+      data_layer    = "S3 + Lake Formation + Glue Catalog"
+      processing    = "Glue Crawler + Data Quality + Remediation Jobs"
+      monitoring    = "Prometheus + Grafana + CloudWatch"
+      automation    = "EventBridge + SNS + Bash Scripts"
+      chaos_testing = "S3 corruption injection + monitoring"
     }
-    resource_count = 25  # Approximate after cleanup
+    resource_count = 25 # Approximate after cleanup
   }
 }

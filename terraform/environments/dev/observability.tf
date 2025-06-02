@@ -11,7 +11,7 @@
 # Local variables for configuration
 locals {
   observability_config = {
-    name_prefix  = "lakehouse-obs-${random_id.bucket_suffix.hex}"
+    name_prefix = "lakehouse-obs-${random_id.bucket_suffix.hex}"
     tags = {
       Name        = "lakehouse-observability"
       Purpose     = "self-healing-lakehouse"
@@ -23,11 +23,11 @@ locals {
 # ===== PROMETHEUS WORKSPACE =====
 resource "aws_prometheus_workspace" "main" {
   alias = local.observability_config.name_prefix
-  
+
   logging_configuration {
     log_group_arn = "${aws_cloudwatch_log_group.prometheus.arn}:*"
   }
-  
+
   tags = local.observability_config.tags
 }
 
@@ -35,7 +35,7 @@ resource "aws_prometheus_workspace" "main" {
 resource "aws_cloudwatch_log_group" "prometheus" {
   name              = "/aws/prometheus/${local.observability_config.name_prefix}"
   retention_in_days = 7
-  
+
   tags = local.observability_config.tags
 }
 
@@ -44,24 +44,24 @@ resource "aws_grafana_workspace" "main" {
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["SAML"]
   permission_type          = "SERVICE_MANAGED"
-  role_arn                = aws_iam_role.grafana.arn
-  
+  role_arn                 = aws_iam_role.grafana.arn
+
   name        = local.observability_config.name_prefix
   description = "Self-Healing Lakehouse Observability Dashboard"
-  
+
   # Essential data sources only
   data_sources = [
-    "PROMETHEUS", 
+    "PROMETHEUS",
     "CLOUDWATCH"
   ]
-  
+
   tags = local.observability_config.tags
 }
 
 # ===== IAM ROLES =====
 resource "aws_iam_role" "grafana" {
   name = "${local.observability_config.name_prefix}-grafana-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -74,7 +74,7 @@ resource "aws_iam_role" "grafana" {
       }
     ]
   })
-  
+
   tags = local.observability_config.tags
 }
 
@@ -93,7 +93,7 @@ resource "aws_iam_role_policy_attachment" "grafana_prometheus" {
 # Main Self-Healing Dashboard (keeps existing name)
 resource "aws_cloudwatch_dashboard" "self_healing" {
   dashboard_name = "SelfHealingLakehouseDashboard"
-  
+
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -102,7 +102,7 @@ resource "aws_cloudwatch_dashboard" "self_healing" {
         y      = 0
         width  = 12
         height = 6
-        
+
         properties = {
           metrics = [
             ["AWS/S3", "NumberOfObjects", "BucketName", module.lakehouse_storage.s3_bucket_id, "StorageType", "AllStorageTypes"]
@@ -124,7 +124,7 @@ resource "aws_cloudwatch_dashboard" "self_healing" {
         y      = 6
         width  = 12
         height = 6
-        
+
         properties = {
           metrics = [
             ["AWS/Events", "MatchedEvents", "RuleName", "self-healing-rule"]
@@ -142,7 +142,7 @@ resource "aws_cloudwatch_dashboard" "self_healing" {
 # Enhanced Dashboard for detailed monitoring
 resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
   dashboard_name = "${local.observability_config.name_prefix}-detailed"
-  
+
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -151,7 +151,7 @@ resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
         y      = 0
         width  = 8
         height = 6
-        
+
         properties = {
           metrics = [
             ["AWS/S3", "NumberOfObjects", "BucketName", module.lakehouse_storage.s3_bucket_id, "StorageType", "AllStorageTypes"],
@@ -169,7 +169,7 @@ resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
         y      = 0
         width  = 8
         height = 6
-        
+
         properties = {
           metrics = [
             ["AWS/Glue", "glue.driver.aggregate.numCompletedStages", "JobName", aws_glue_job.data_quality.name],
@@ -187,7 +187,7 @@ resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
         y      = 0
         width  = 8
         height = 6
-        
+
         properties = {
           metrics = [
             ["AWS/Events", "MatchedEvents", "RuleName", "new_data_uploaded"],
@@ -215,14 +215,14 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_failures" {
   statistic           = "Sum"
   threshold           = "0"
   alarm_description   = "Data quality job failures detected"
-  
+
   dimensions = {
     JobName = aws_glue_job.data_quality.name
   }
-  
+
   alarm_actions = [module.healing_alerts_sns.topic_arn]
   ok_actions    = [module.healing_alerts_sns.topic_arn]
-  
+
   tags = local.observability_config.tags
 }
 
@@ -233,18 +233,18 @@ resource "aws_cloudwatch_metric_alarm" "s3_object_threshold" {
   evaluation_periods  = "2"
   metric_name         = "NumberOfObjects"
   namespace           = "AWS/S3"
-  period              = "86400"  # Daily check
+  period              = "86400" # Daily check
   statistic           = "Average"
   threshold           = "1"
   alarm_description   = "Data lake appears empty - potential issue"
-  
+
   dimensions = {
     BucketName  = module.lakehouse_storage.s3_bucket_id
     StorageType = "AllStorageTypes"
   }
-  
+
   alarm_actions = [module.healing_alerts_sns.topic_arn]
-  
+
   tags = local.observability_config.tags
 }
 
@@ -257,15 +257,15 @@ output "observability_enhanced" {
       id       = aws_grafana_workspace.main.id
     }
     prometheus = {
-      endpoint = aws_prometheus_workspace.main.prometheus_endpoint
+      endpoint     = aws_prometheus_workspace.main.prometheus_endpoint
       workspace_id = aws_prometheus_workspace.main.id
     }
     dashboards = {
-      main = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouseDashboard"
+      main     = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouseDashboard"
       detailed = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.self_healing_enhanced.dashboard_name}"
     }
     alarms = {
-      data_quality = aws_cloudwatch_metric_alarm.data_quality_failures.arn
+      data_quality  = aws_cloudwatch_metric_alarm.data_quality_failures.arn
       s3_monitoring = aws_cloudwatch_metric_alarm.s3_object_threshold.arn
     }
   }

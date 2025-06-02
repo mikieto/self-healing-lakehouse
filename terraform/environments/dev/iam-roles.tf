@@ -10,7 +10,7 @@
 # IAM Role for Glue services
 resource "aws_iam_role" "glue" {
   name = "lakehouse-glue-role-${random_id.bucket_suffix.hex}"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -23,7 +23,7 @@ resource "aws_iam_role" "glue" {
       }
     ]
   })
-  
+
   tags = {
     Name    = "lakehouse-glue-role"
     Purpose = "data-processing"
@@ -40,7 +40,7 @@ resource "aws_iam_role_policy_attachment" "glue_service" {
 resource "aws_iam_policy" "glue_s3_access" {
   name        = "lakehouse-glue-s3-access-${random_id.bucket_suffix.hex}"
   description = "S3 access policy for Glue jobs"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

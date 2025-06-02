@@ -13,9 +13,9 @@
 module "healing_alerts_sns" {
   source  = "terraform-aws-modules/sns/aws"
   version = "~> 6.0"
-  
+
   name = "self-healing-alerts-${random_id.bucket_suffix.hex}"
-  
+
   # Optional: Email subscription for alerts
   subscriptions = {
     email = {
@@ -23,7 +23,7 @@ module "healing_alerts_sns" {
       endpoint = var.alert_email
     }
   }
-  
+
   tags = {
     Name    = "self-healing-alerts"
     Purpose = "self-healing-notifications"

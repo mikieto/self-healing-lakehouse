@@ -5,47 +5,47 @@ module "lakehouse_rds" {
   version = "~> 6.0"
 
   identifier = "lakehouse-db-${random_id.bucket_suffix.hex}"
-  
+
   # Engine configuration
   engine               = "postgres"
   engine_version       = "15.7"
   family               = "postgres15"
   major_engine_version = "15"
   instance_class       = "db.t3.micro"
-  
+
   # Storage (enterprise-grade)
   allocated_storage     = 20
   max_allocated_storage = 100
   storage_encrypted     = true
-  
+
   # Database
-  db_name  = "lakehouse"
-  username = "dbadmin"  # Changed from "admin" (PostgreSQL reserved word)
-  manage_master_user_password = true  # AWS Secrets Manager
-  
+  db_name                     = "lakehouse"
+  username                    = "dbadmin" # Changed from "admin" (PostgreSQL reserved word)
+  manage_master_user_password = true      # AWS Secrets Manager
+
   # Network - enterprise VPC integration
   db_subnet_group_name   = module.vpc.database_subnet_group
   vpc_security_group_ids = [aws_security_group.database.id]
-  publicly_accessible    = false  # Enterprise security
-  
+  publicly_accessible    = false # Enterprise security
+
   # Enterprise backup requirements
   backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-  
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
+
   # Enterprise monitoring
-  monitoring_interval    = 60
-  monitoring_role_name   = "rds-monitoring-${random_id.bucket_suffix.hex}"
-  create_monitoring_role = true
+  monitoring_interval          = 60
+  monitoring_role_name         = "rds-monitoring-${random_id.bucket_suffix.hex}"
+  create_monitoring_role       = true
   performance_insights_enabled = true
-  
+
   # Multi-AZ for enterprise reliability
   multi_az = var.environment == "prod"
-  
+
   # Environment-based deletion protection
   deletion_protection = var.environment == "prod"
   skip_final_snapshot = var.environment != "prod"
-  
+
   tags = {
     Name        = "lakehouse-database"
     Purpose     = "self-healing-lakehouse"
@@ -61,7 +61,7 @@ resource "aws_glue_connection" "rds" {
 
   connection_properties = {
     JDBC_CONNECTION_URL = "jdbc:postgresql://${module.lakehouse_rds.db_instance_endpoint}/lakehouse"
-    USERNAME            = "dbadmin"  # Changed from "admin"
+    USERNAME            = "dbadmin" # Changed from "admin"
     PASSWORD            = module.lakehouse_rds.db_instance_master_user_secret_arn
   }
 
@@ -102,13 +102,13 @@ output "rds_connection_info" {
 output "rds_enterprise_features" {
   description = "Enterprise features status"
   value = {
-    vpc_isolation      = "complete"
-    security_groups    = "3-tier-architecture"
-    glue_integration   = "enterprise"
-    monitoring         = "enhanced"
-    backup_strategy    = "enterprise_compliant"
-    encryption         = "enabled"
-    multi_az           = var.environment == "prod" ? "enabled" : "single_az_dev"
-    network_tier       = "private_database_subnets"
+    vpc_isolation    = "complete"
+    security_groups  = "3-tier-architecture"
+    glue_integration = "enterprise"
+    monitoring       = "enhanced"
+    backup_strategy  = "enterprise_compliant"
+    encryption       = "enabled"
+    multi_az         = var.environment == "prod" ? "enabled" : "single_az_dev"
+    network_tier     = "private_database_subnets"
   }
 }

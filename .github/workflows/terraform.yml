@@ -69,12 +69,12 @@ jobs:
     - name: Terraform Plan
       id: plan
       if: github.event_name == 'pull_request'
-      run: terraform plan -no-color -input=false
+      run: terraform plan -no-color -input=false -var="alert_email=${{ vars.ALERT_EMAIL }}"
       continue-on-error: true
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false
+      run: terraform apply -auto-approve -input=false -var="alert_email=${{ vars.ALERT_EMAIL }}"
 
     - name: Send notification
       if: failure()

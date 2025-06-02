@@ -58,11 +58,5 @@ resource "aws_s3_bucket_notification" "lakehouse_events" {
 }
 
 # Lake Formation Data Lake Settings (simplified)
-resource "aws_lakeformation_data_lake_settings" "lakehouse" {
-  admins = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-
-  # Simplified configuration without default permissions
-  trusted_resource_owners = [data.aws_caller_identity.current.account_id]
-}
 
 # Note: random_id and data sources are already defined in main.tf

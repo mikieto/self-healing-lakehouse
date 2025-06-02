@@ -1,13 +1,12 @@
 # =======================================================
-# [CODE PILLAR FOUNDATION] S3 Native Locking Bootstrap
+# [THREE PILLARS FOUNDATION] S3 Native Locking Bootstrap
 # =======================================================
-# Purpose: Establish S3 Native Locking foundation for Technical Survival Strategy
-# Benefit: Simplified, cost-effective state management without DynamoDB
-# Three Pillars Role: Enables Code Pillar with S3-only state management
-# Learning Value: Shows modern Terraform state management patterns
+# Purpose: S3 Native Locking foundation (NO DynamoDB required)
+# Benefit: Cost-effective state management with Terraform 1.6+ native locking
+# Learning Value: Modern Terraform state management without additional services
 
 terraform {
-  required_version = ">= 1.7"
+  required_version = ">= 1.6"  # S3 Native Locking requires 1.6+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -19,7 +18,6 @@ terraform {
     }
   }
   
-  # Local backend for bootstrap phase
   backend "local" {
     path = "terraform.tfstate"
   }
@@ -28,44 +26,40 @@ terraform {
 provider "aws" {
   region = var.aws_region
   
-  # Default tags for all bootstrap resources
   default_tags {
     tags = {
-      Project     = "TechnicalSurvivalStrategy"
+      Project     = var.project_name
       Environment = "bootstrap"
       ManagedBy   = "terraform"
-      Purpose     = "s3-native-locking-foundation"
-      Pillar      = "Code"
+      LockingType = "s3-native"
     }
   }
 }
 
-# Random suffix for unique resource naming
-resource "random_id" "bootstrap_suffix" {
+# Unique suffix for resource naming
+resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# Current AWS account and region information
+# AWS account and region data
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 # =======================================================
-# [CODE PILLAR] S3 Native Locking State Backend
+# [CODE PILLAR] S3 State Bucket (Native Locking Ready)
 # =======================================================
 
-# S3 bucket for Terraform state storage with native locking
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "tss-terraform-state-${random_id.bootstrap_suffix.hex}"
-  
+  bucket = "${var.project_name}-state-${random_id.suffix.hex}"
+
   tags = {
-    Name      = "terraform-state-backend"
-    Pillar    = "Code"
-    Component = "S3NativeStateManagement"
-    Purpose   = "S3 Native Locking foundation infrastructure"
+    Name        = "terraform-state-s3-native-locking"
+    Purpose     = "S3 Native Locking state storage"
+    LockingType = "s3-native"
   }
 }
 
-# Enable versioning for state file protection
+# Versioning enables state history and rollback
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
   versioning_configuration {
@@ -73,10 +67,9 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   }
 }
 
-# Enable server-side encryption for security
+# Encryption for security
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
-
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -84,7 +77,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
   }
 }
 
-# Block public access for security
+# Block all public access
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -95,55 +88,57 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
 }
 
 # =======================================================
-# [OBSERVABILITY PILLAR] Bootstrap Monitoring
+# [GUARD PILLAR] GitHub Actions OIDC (Minimal)
 # =======================================================
 
-# CloudWatch Log Group for bootstrap operations
-resource "aws_cloudwatch_log_group" "bootstrap_logs" {
-  name              = "/aws/tss/bootstrap-${random_id.bootstrap_suffix.hex}"
-  retention_in_days = 14
+resource "aws_iam_openid_connect_provider" "github_actions" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 
   tags = {
-    Name      = "bootstrap-operations-logs"
-    Pillar    = "Observability"
-    Component = "BootstrapLogging"
-    Purpose   = "Track bootstrap process for troubleshooting"
+    Name        = "github-actions-oidc"
+    Purpose     = "OIDC authentication for CI/CD"
+    LockingType = "s3-native"
   }
 }
 
-# =======================================================
-# [GUARD PILLAR] IAM Role for Secure Terraform Operations
-# =======================================================
-
-# IAM role for Terraform operations with minimal required permissions
-resource "aws_iam_role" "terraform_execution" {
-  name = "tss-terraform-execution-${random_id.bootstrap_suffix.hex}"
+resource "aws_iam_role" "github_actions" {
+  name = "GitHubActionsRole-${random_id.suffix.hex}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "ec2.amazonaws.com"
+          Federated = aws_iam_openid_connect_provider.github_actions.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:*"
+          }
         }
       }
     ]
   })
 
   tags = {
-    Name      = "terraform-execution-role"
-    Pillar    = "Guard"
-    Component = "SecureExecution"
-    Purpose   = "Controlled permissions for Terraform operations"
+    Name        = "github-actions-role"
+    Purpose     = "GitHub Actions Terraform permissions"
+    LockingType = "s3-native"
   }
 }
 
-# Policy for Terraform state management operations (S3 only)
-resource "aws_iam_role_policy" "terraform_state_access" {
-  name = "terraform-state-access"
-  role = aws_iam_role.terraform_execution.id
+# Comprehensive permissions for lakehouse deployment
+resource "aws_iam_role_policy" "github_actions_permissions" {
+  name = "github-actions-s3-native-policy"
+  role = aws_iam_role.github_actions.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -151,22 +146,43 @@ resource "aws_iam_role_policy" "terraform_state_access" {
       {
         Effect = "Allow"
         Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
+          # Core AWS services for lakehouse
+          "ec2:*",
+          "s3:*",
+          "rds:*", 
+          "glue:*",
+          "events:*",
+          "logs:*",
+          "cloudwatch:*",
+          "sns:*",
+          "lambda:*",
+          "kms:*",
+          
+          # IAM for service roles
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy", 
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:PassRole",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:List*",
+          "iam:Get*",
+          
+          # Identity verification
+          "sts:GetCallerIdentity"
         ]
-        Resource = [
-          aws_s3_bucket.terraform_state.arn,
-          "${aws_s3_bucket.terraform_state.arn}/*"
-        ]
+        Resource = "*"
       }
     ]
   })
 }
 
 # =======================================================
-# Note: S3 Native Locking eliminates the need for DynamoDB
-# State locking is handled directly by S3 with use_lockfile = true
-# This simplifies the architecture and reduces costs
+# NOTE: S3 Native Locking eliminates DynamoDB entirely
+# State locking handled by S3 with use_lockfile = true
+# Terraform 1.6+ feature for simplified architecture
 # =======================================================

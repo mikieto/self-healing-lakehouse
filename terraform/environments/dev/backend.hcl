@@ -1,9 +1,9 @@
 # Auto-generated backend configuration
-# Generated on: Sun Jun  1 08:43:17 UTC 2025
+# Generated on: Mon Jun  2 06:13:39 UTC 2025
 # Environment: dev
-# Bootstrap bucket: tss-terraform-state-628675ab
+# Bootstrap bucket: self-healing-lakehouse-state-a3547b07
 
-bucket         = "tss-terraform-state-628675ab"
+bucket         = "self-healing-lakehouse-state-a3547b07"
 key            = "env/dev/terraform.tfstate"
 region         = "us-east-1"
 encrypt        = true

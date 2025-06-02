@@ -40,7 +40,7 @@ select
     'dbt_code_pillar' as processing_source,
     
     -- Data lineage tracking (Code pillar principle)
-    '2025-06-01 07:17:07.594398+00:00' as dbt_run_started_at
+    '2025-06-02 04:41:42.596964+00:00' as dbt_run_started_at
 
 from "lakehouse"."public"."sensor_readings"
 

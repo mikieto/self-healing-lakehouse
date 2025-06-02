@@ -1,11 +1,9 @@
-# =========================================================
-# [THREE PILLARS FOUNDATION] Bootstrap Configuration
-# =========================================================
-# Purpose: Centralized configuration for Technical Survival Strategy foundation
-# Learning Value: Shows infrastructure configuration management best practices
+# =======================================================
+# [S3 NATIVE LOCKING] Bootstrap Variables
+# =======================================================
 
 variable "aws_region" {
-  description = "AWS region for Three Pillars foundation infrastructure"
+  description = "AWS region for S3 Native Locking infrastructure"
   type        = string
   default     = "us-east-1"
   
@@ -16,67 +14,23 @@ variable "aws_region" {
 }
 
 variable "project_name" {
-  description = "Project name for Technical Survival Strategy implementation"
+  description = "Project name for S3 bucket and resource naming"
   type        = string
-  default     = "technical-survival-strategy"
+  default     = "self-healing-lakehouse"
   
   validation {
-    condition     = length(var.project_name) > 0 && length(var.project_name) <= 50
-    error_message = "Project name must be between 1 and 50 characters."
+    condition     = length(var.project_name) > 0 && length(var.project_name) <= 30
+    error_message = "Project name must be between 1 and 30 characters for S3 bucket naming."
   }
 }
 
-variable "environment" {
-  description = "Environment name for bootstrap infrastructure"
+variable "github_repository" {
+  description = "GitHub repository for OIDC authentication (format: owner/repo)"
   type        = string
-  default     = "bootstrap"
+  default     = "miki79/self-healing-lakehouse"
   
   validation {
-    condition     = contains(["bootstrap", "dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be one of: bootstrap, dev, staging, prod."
+    condition     = can(regex("^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", var.github_repository))
+    error_message = "GitHub repository must be in format 'owner/repository'."
   }
-}
-
-# Code Pillar configuration
-variable "state_retention_days" {
-  description = "[CODE PILLAR] Terraform state backup retention period"
-  type        = number
-  default     = 90
-  
-  validation {
-    condition     = var.state_retention_days > 0 && var.state_retention_days <= 365
-    error_message = "State retention must be between 1 and 365 days."
-  }
-}
-
-# Observability Pillar configuration
-variable "log_retention_days" {
-  description = "[OBSERVABILITY PILLAR] CloudWatch log retention period"
-  type        = number
-  default     = 14
-  
-  validation {
-    condition     = var.log_retention_days > 0 && var.log_retention_days <= 365
-    error_message = "Log retention must be between 1 and 365 days."
-  }
-}
-
-# Guard Pillar configuration
-variable "enable_access_logging" {
-  description = "[GUARD PILLAR] Enable S3 access logging for audit trail"
-  type        = bool
-  default     = true
-}
-
-variable "force_destroy_state_bucket" {
-  description = "[GUARD PILLAR] Allow destruction of state bucket (use with caution)"
-  type        = bool
-  default     = false
-}
-
-# Learning environment specific
-variable "learning_mode" {
-  description = "Enable learning-friendly configurations and outputs"
-  type        = bool
-  default     = true
 }

@@ -50,12 +50,33 @@ jobs:
       id: validate
       run: terraform validate -no-color
 
+    - name: Debug - Check working directory before tfsec
+      run: |
+        echo "=== Pre-tfsec Debug ==="
+        pwd
+        ls -la
+        echo "GitHub workspace: ${{ github.workspace }}"
+        echo "Current directory files:"
+        find . -name "*.tf" | head -5
+
     - name: Run tfsec security scan
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
         working_directory: terraform/environments/dev
-        format: sarif
+        additional_args: --format sarif --out ./results.sarif
         soft_fail: true
+
+    - name: Debug - Check files after tfsec
+      if: always()
+      run: |
+        echo "=== Post-tfsec Debug ==="
+        pwd
+        ls -la
+        echo "Looking for SARIF files:"
+        find . -name "*.sarif" 2>/dev/null || echo "No SARIF files found"
+        find ${{ github.workspace }} -name "*.sarif" 2>/dev/null || echo "No SARIF files in workspace"
+        echo "Directory contents:"
+        ls -la ${{ github.workspace }}/terraform/environments/dev/ || echo "Directory not found"
 
     - name: Upload security scan results
       uses: github/codeql-action/upload-sarif@v3

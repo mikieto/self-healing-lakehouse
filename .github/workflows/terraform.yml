@@ -11,6 +11,10 @@ permissions:
   id-token: write
   security-events: write
 
+env:
+  TERRAFORM_DIR: terraform/environments/dev
+  SARIF_FILE: results.sarif
+
 jobs:
   terraform:
     name: 'Terraform'
@@ -50,48 +54,19 @@ jobs:
       id: validate
       run: terraform validate -no-color
 
-    - name: Debug GitHub variables
-      run: |
-        echo "Repository: ${{ github.repository }}"
-        echo "Repository owner: ${{ github.repository_owner }}"
-        echo "Workspace: ${{ github.workspace }}"
-        echo "Actor: ${{ github.actor }}"
-
-    - name: Debug - Check working directory before tfsec
-      run: |
-        echo "=== Pre-tfsec Debug ==="
-        pwd
-        ls -la
-        echo "GitHub workspace: ${{ github.workspace }}"
-        echo "Current directory files:"
-        ls -la *.tf | head -5 || echo "Terraform files found"
-
     - name: Run tfsec security scan
       uses: aquasecurity/tfsec-action@v1.0.0
       with:
-        working_directory: terraform/environments/dev
-        additional_args: --format sarif --out ./results.sarif
+        working_directory: ${{ env.TERRAFORM_DIR }}
+        additional_args: --format sarif --out ${{ github.workspace }}/${{ env.TERRAFORM_DIR }}/${{ env.SARIF_FILE }}
         soft_fail: true
-
-    - name: Debug - Check files after tfsec
-      if: always()
-      run: |
-        echo "=== Post-tfsec Debug ==="
-        pwd
-        ls -la
-        echo "Looking for SARIF files:"
-        find . -name "*.sarif" 2>/dev/null || echo "No SARIF files found"
-        find ${{ github.workspace }} -name "*.sarif" 2>/dev/null || echo "No SARIF files in workspace"
-        echo "Directory contents:"
-        ls -la ${{ github.workspace }}/terraform/environments/dev/ || echo "Directory not found"
 
     - name: Upload security scan results
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
-        sarif_file: ${{ github.workspace }}/terraform/environments/dev/results.sarif
-        
-  
+        sarif_file: ${{ github.workspace }}/${{ env.TERRAFORM_DIR }}/${{ env.SARIF_FILE }}
+
     - name: Terraform Plan
       id: plan
       if: github.event_name == 'pull_request'

@@ -1,12 +1,10 @@
 # =======================================================
-# [THREE PILLARS FOUNDATION] S3 Native Locking Bootstrap
+# [S3 NATIVE LOCKING] Bootstrap with AWS Official Modules
 # =======================================================
-# Purpose: S3 Native Locking foundation (NO DynamoDB required)
-# Benefit: Cost-effective state management with Terraform 1.6+ native locking
-# Learning Value: Modern Terraform state management without additional services
 
 terraform {
-  required_version = ">= 1.6"  # S3 Native Locking requires 1.6+
+  required_version = ">= 1.6"
+  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -17,129 +15,82 @@ terraform {
       version = "~> 3.1"
     }
   }
-  
-  backend "local" {
-    path = "terraform.tfstate"
-  }
 }
 
 provider "aws" {
   region = var.aws_region
-  
-  default_tags {
-    tags = {
-      Project     = var.project_name
-      Environment = "bootstrap"
-      ManagedBy   = "terraform"
-      LockingType = "s3-native"
-    }
-  }
 }
 
-# Unique suffix for resource naming
+# Current AWS region data source
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+# Random suffix for unique naming
 resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# AWS account and region data
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-
 # =======================================================
-# [CODE PILLAR] S3 State Bucket (Native Locking Ready)
+# S3 Bucket using AWS Official Module
 # =======================================================
 
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "${var.project_name}-state-${random_id.suffix.hex}"
+module "s3_bucket" {
+  source = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.0"
 
-  tags = {
-    Name        = "terraform-state-s3-native-locking"
-    Purpose     = "S3 Native Locking state storage"
-    LockingType = "s3-native"
+  bucket = "${var.project_name}-terraform-state-${random_id.suffix.hex}"
+  
+  # S3 Native Locking Configuration
+  versioning = {
+    enabled = true
   }
-}
-
-# Versioning enables state history and rollback
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# Encryption for security
-resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+  
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm = "AES256"
+      }
     }
   }
-}
-
-# Block all public access
-resource "aws_s3_bucket_public_access_block" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-
+  
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
-
-# =======================================================
-# [GUARD PILLAR] GitHub Actions OIDC (Minimal)
-# =======================================================
-
-resource "aws_iam_openid_connect_provider" "github_actions" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
-
+  
   tags = {
-    Name        = "github-actions-oidc"
-    Purpose     = "OIDC authentication for CI/CD"
-    LockingType = "s3-native"
+    Name = "Terraform State Bucket"
+    Project = var.project_name
+    LockingMethod = "s3_native"
   }
 }
 
-resource "aws_iam_role" "github_actions" {
+# =======================================================
+# IAM Module for GitHub Actions
+# =======================================================
+
+module "iam_github_oidc_role" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-github-oidc-role"
+  version = "~> 5.0"
+
   name = "GitHubActionsRole-${random_id.suffix.hex}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github_actions.arn
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          }
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:*"
-          }
-        }
-      }
-    ]
-  })
+  
+  subjects = ["repo:${var.github_repository}:*"]
+  
+  policies = {
+    LakehouseFullAccess = aws_iam_policy.github_actions_permissions.arn
+  }
 
   tags = {
-    Name        = "github-actions-role"
-    Purpose     = "GitHub Actions Terraform permissions"
-    LockingType = "s3-native"
+    Name = "GitHub Actions Role"
+    Project = var.project_name
   }
 }
 
-# Comprehensive permissions for lakehouse deployment
-resource "aws_iam_role_policy" "github_actions_permissions" {
-  name = "github-actions-s3-native-policy"
-  role = aws_iam_role.github_actions.id
-
+# Custom policy for lakehouse permissions
+resource "aws_iam_policy" "github_actions_permissions" {
+  name = "github-actions-lakehouse-policy-${random_id.suffix.hex}"
+  
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -147,42 +98,78 @@ resource "aws_iam_role_policy" "github_actions_permissions" {
         Effect = "Allow"
         Action = [
           # Core AWS services for lakehouse
-          "ec2:*",
-          "s3:*",
-          "rds:*", 
-          "glue:*",
-          "events:*",
-          "logs:*",
-          "cloudwatch:*",
-          "sns:*",
-          "lambda:*",
-          "kms:*",
+          "ec2:*", "s3:*", "rds:*", "glue:*", "events:*",
+          "logs:*", "cloudwatch:*", "sns:*", "lambda:*", "kms:*",
           
-          # IAM for service roles
-          "iam:GetRole",
-          "iam:CreateRole",
-          "iam:DeleteRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy", 
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
-          "iam:PassRole",
-          "iam:TagRole",
-          "iam:UntagRole",
-          "iam:List*",
-          "iam:Get*",
+          # IAM permissions
+          "iam:GetRole", "iam:CreateRole", "iam:DeleteRole",
+          "iam:AttachRolePolicy", "iam:DetachRolePolicy", 
+          "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:PassRole",
+          "iam:TagRole", "iam:UntagRole", "iam:List*", "iam:Get*",
+          "iam:CreatePolicy", "iam:DeletePolicy",
+          "iam:CreateInstanceProfile", "iam:DeleteInstanceProfile",
+          "iam:AddRoleToInstanceProfile", "iam:RemoveRoleFromInstanceProfile",
           
-          # Identity verification
-          "sts:GetCallerIdentity"
+          # Additional services
+          "secretsmanager:*", "aps:*", "grafana:*", "lakeformation:*",
+          "application-autoscaling:*", "elasticloadbalancing:*", 
+          "autoscaling:*", "ssm:*", "sts:GetCallerIdentity"
         ]
         Resource = "*"
       }
     ]
   })
+
+  tags = {
+    Name = "GitHub Actions Lakehouse Policy"
+    Project = var.project_name
+  }
 }
 
 # =======================================================
-# NOTE: S3 Native Locking eliminates DynamoDB entirely
-# State locking handled by S3 with use_lockfile = true
-# Terraform 1.6+ feature for simplified architecture
+# OIDC Provider for GitHub Actions (Missing Definition)
 # =======================================================
+
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com",
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
+  ]
+
+  tags = {
+    Name = "GitHub Actions OIDC Provider"
+    Project = var.project_name
+  }
+}
+
+# =======================================================
+# Lake Formation Data Lake Settings
+# =======================================================
+
+resource "aws_lakeformation_data_lake_settings" "main" {
+  admins = [
+    data.aws_caller_identity.current.arn,  # Current user (mikieto)
+    module.iam_github_oidc_role.arn        # GitHub Actions Role
+  ]
+
+  create_database_default_permissions {
+    permissions = []
+    principal   = "IAM_ALLOWED_PRINCIPALS"
+  }
+
+  create_table_default_permissions {
+    permissions = []
+    principal   = "IAM_ALLOWED_PRINCIPALS"
+  }
+
+  trusted_resource_owners = [
+    data.aws_caller_identity.current.account_id
+  ]
+  
+}

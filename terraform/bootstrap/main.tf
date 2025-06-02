@@ -113,7 +113,8 @@ resource "aws_iam_policy" "github_actions_permissions" {
           # Additional services
           "secretsmanager:*", "aps:*", "grafana:*", "lakeformation:*",
           "application-autoscaling:*", "elasticloadbalancing:*",
-          "autoscaling:*", "ssm:*", "sts:GetCallerIdentity"
+          "autoscaling:*", "ssm:*", "sts:GetCallerIdentity",
+          "lakeformation:*"
         ]
         Resource = "*"
       }
@@ -159,12 +160,12 @@ resource "aws_lakeformation_data_lake_settings" "main" {
   ]
 
   create_database_default_permissions {
-    permissions = []
+    permissions = ["ALL"]
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 
   create_table_default_permissions {
-    permissions = []
+    permissions = ["ALL"]
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 

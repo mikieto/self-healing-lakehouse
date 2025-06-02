@@ -27,7 +27,7 @@ variable "project_name" {
 variable "github_repository" {
   description = "GitHub repository for OIDC authentication (format: owner/repo)"
   type        = string
-  default     = "miki79/self-healing-lakehouse"
+  default     = "mikieto/self-healing-lakehouse"
   
   validation {
     condition     = can(regex("^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", var.github_repository))

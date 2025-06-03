@@ -315,43 +315,43 @@ CSV
 
 # Script version metadata
 resource "aws_s3_object" "script_versions" {
-  bucket  = module.lakehouse_storage.s3_bucket_id
-  key     = "scripts/.versions.json"
+  bucket = module.lakehouse_storage.s3_bucket_id
+  key    = "scripts/.versions.json"
   content = jsonencode({
     deployment_info = {
-      timestamp = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
-      git_commit = var.git_commit_hash
-      deployed_by = var.deployed_by
+      timestamp         = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
+      git_commit        = var.git_commit_hash
+      deployed_by       = var.deployed_by
       terraform_version = "1.7+"
     }
     scripts = {
       data_quality_job = {
-        file_path = "scripts/glue/data_quality_job.py"
-        s3_key = "scripts/data_quality_job.py"
+        file_path    = "scripts/glue/data_quality_job.py"
+        s3_key       = "scripts/data_quality_job.py"
         version_hash = filemd5("${path.root}/../../../scripts/glue/data_quality_job.py")
-        git_commit = var.git_commit_hash
-        deployed_at = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
+        git_commit   = var.git_commit_hash
+        deployed_at  = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
       }
       remediation_job = {
-        file_path = "scripts/glue/remediation_job.py"
-        s3_key = "scripts/remediation_job.py" 
+        file_path    = "scripts/glue/remediation_job.py"
+        s3_key       = "scripts/remediation_job.py"
         version_hash = filemd5("${path.root}/../../../scripts/glue/remediation_job.py")
-        git_commit = var.git_commit_hash
-        deployed_at = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
+        git_commit   = var.git_commit_hash
+        deployed_at  = var.deployment_timestamp != "" ? var.deployment_timestamp : timestamp()
       }
     }
     environment = {
-      name = var.environment
+      name       = var.environment
       aws_region = data.aws_region.current.name
-      bucket = module.lakehouse_storage.s3_bucket_id
+      bucket     = module.lakehouse_storage.s3_bucket_id
     }
   })
-  
+
   content_type = "application/json"
-  
+
   tags = merge(local.glue_config.tags, {
     Purpose = "version-management"
-    Type = "deployment-metadata"
+    Type    = "deployment-metadata"
   })
 }
 
@@ -359,7 +359,7 @@ resource "aws_s3_object" "script_versions" {
 resource "aws_cloudwatch_log_group" "script_deployment" {
   name              = "/aws/terraform/script-deployment"
   retention_in_days = 30
-  
+
   tags = merge(local.glue_config.tags, {
     Purpose = "deployment-tracking"
   })

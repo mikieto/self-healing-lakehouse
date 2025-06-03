@@ -152,10 +152,10 @@ output "architecture_info" {
 output "version_management" {
   description = "Version management information"
   value = {
-    git_commit = var.git_commit_hash
-    deployment_timestamp = var.deployment_timestamp
-    deployed_by = var.deployed_by
+    git_commit                = var.git_commit_hash
+    deployment_timestamp      = var.deployment_timestamp
+    deployed_by               = var.deployed_by
     version_metadata_location = "s3://${module.lakehouse_storage.s3_bucket_id}/scripts/.versions.json"
-    version_history_logs = "/aws/terraform/script-deployment"
+    version_history_logs      = "/aws/terraform/script-deployment"
   }
 }

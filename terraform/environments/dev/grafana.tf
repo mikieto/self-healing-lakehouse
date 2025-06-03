@@ -1,77 +1,64 @@
 # ====================================================
-# [OBSERVABILITY PILLAR] AWS Managed Grafana
+# [OBSERVABILITY PILLAR] AWS Managed Grafana - terraform-aws-modules
 # ====================================================
+# Purpose: Enterprise Grafana workspace with official modules
+# Benefit: Proven stability + Cloud Posse naming
+# Three Pillars Role: Real-time dashboards and monitoring
+# Learning Value: Shows hybrid approach (official modules + Cloud Posse naming)
 
-# Local variables for Grafana configuration
-locals {
-  grafana_config = {
-    name_prefix = "lakehouse-grafana-${random_id.bucket_suffix.hex}"
-    tags = {
-      Name        = "lakehouse-grafana"
-      Purpose     = "self-healing-lakehouse"
-      Environment = var.environment
-      Component   = "observability"
-      Pillar      = "observability"
-    }
-  }
-}
+# terraform/environments/dev/grafana.tf
 
-# ===== GRAFANA WORKSPACE =====
-resource "aws_grafana_workspace" "main" {
+# ===== TERRAFORM-AWS-MODULES GRAFANA =====
+module "grafana" {
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.0"
+
+  # 🌩️ Cloud Posse naming integration
+  name = module.monitoring_label.id
+
+  # Grafana workspace configuration
   account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["SAML"]
+  authentication_providers = ["AWS_SSO"]
   permission_type          = "SERVICE_MANAGED"
-  role_arn                 = aws_iam_role.grafana.arn
 
-  name        = local.grafana_config.name_prefix
-  description = "Self-Healing Lakehouse Observability Dashboard"
-
+  # Essential data sources
   data_sources = [
-    "PROMETHEUS",
-    "CLOUDWATCH"
+    "CLOUDWATCH",
+    "PROMETHEUS"
   ]
 
-  tags = local.grafana_config.tags
-}
+  # Notification destinations
+  notification_destinations = ["SNS"]
 
-# ===== IAM ROLE FOR GRAFANA =====
-resource "aws_iam_role" "grafana" {
-  name = "${local.grafana_config.name_prefix}-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "grafana.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.grafana_config.tags
-}
-
-# Essential Grafana permissions
-resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
-  role       = aws_iam_role.grafana.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonGrafanaCloudWatchAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "grafana_prometheus" {
-  role       = aws_iam_role.grafana.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonPrometheusQueryAccess"
+  # 🌩️ Cloud Posse tags
+  tags = module.monitoring_label.tags
 }
 
 # ===== OUTPUTS =====
 output "grafana_info" {
-  description = "Grafana workspace information"
+  description = "Terraform AWS Modules Grafana workspace information"
   value = {
-    endpoint    = aws_grafana_workspace.main.endpoint
-    id          = aws_grafana_workspace.main.id
-    role_arn    = aws_iam_role.grafana.arn
+    # Core Grafana info
+    endpoint = module.grafana.workspace_endpoint
+    id       = module.grafana.workspace_id
+    arn      = module.grafana.workspace_arn
+    
+    # IAM role
+    role_arn = module.grafana.workspace_iam_role_arn
+    
+    # URLs
     console_url = "https://console.aws.amazon.com/grafana/home?region=${var.aws_region}#/workspaces"
+    
+    # 🌩️ Cloud Posse naming
+    name = module.monitoring_label.id
+    tags = module.monitoring_label.tags
+    
+    # 🎯 Hybrid approach benefits
+    features = {
+      module_provider  = "terraform-aws-modules"
+      naming_provider  = "cloudposse"
+      stability        = "high"
+      custom_code      = "minimal"
+    }
   }
 }

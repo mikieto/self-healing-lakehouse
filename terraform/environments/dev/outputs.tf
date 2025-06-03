@@ -10,8 +10,8 @@ locals {
   # Common references to avoid repetition
   bucket_id           = module.lakehouse_storage.s3_bucket_id
   bucket_arn          = module.lakehouse_storage.s3_bucket_arn
-  # Fixed: Use references from new separated files
-  grafana_endpoint    = aws_grafana_workspace.main.endpoint
+  # Fixed: Use references from Cloud Posse modules
+  grafana_endpoint    = try(module.grafana.workspace_endpoint, "not_available")
   prometheus_endpoint = try(aws_prometheus_workspace.main[0].prometheus_endpoint, "not_enabled_in_dev")
 }
 

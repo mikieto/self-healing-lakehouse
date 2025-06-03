@@ -283,7 +283,7 @@ SENSOR_005,22.9,46.3,2024-06-03T10:04:00Z,OK
 CSV
 
   content_type = "text/csv"
-  
+
   tags = merge(local.glue_config.tags, {
     Purpose = "sample-data"
     Type    = "clean-sensor-data"
@@ -292,7 +292,7 @@ CSV
 
 resource "aws_s3_object" "sample_data_corrupt" {
   bucket  = module.lakehouse_storage.s3_bucket_id
-  key     = "raw/sample_data_corrupt.csv"  
+  key     = "raw/sample_data_corrupt.csv"
   content = <<-CSV
 sensor_id,temperature,humidity,timestamp,status
 SENSOR_999,999.0,999.0,invalid_timestamp,CORRUPT
@@ -302,7 +302,7 @@ SENSOR_777,,,-999,ERROR
 CSV
 
   content_type = "text/csv"
-  
+
   tags = merge(local.glue_config.tags, {
     Purpose = "sample-data"
     Type    = "corrupt-test-data"

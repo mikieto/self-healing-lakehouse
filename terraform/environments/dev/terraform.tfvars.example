@@ -7,20 +7,22 @@
 # ================================================
 # 🏷️ Your Project Identity
 # ================================================
-project_name = "my-learning-lakehouse"  # Give your project a unique name!
-environment  = "dev"                    # Keep as 'dev' for learning
-aws_region   = "us-east-1"             # Try different regions if you want!
+project_name = "learning-lakehouse"   # Max 20 characters, lowercase with hyphens
+environment  = "dev"                  # Keep as 'dev' for learning
+aws_region   = "us-east-1"           # Try different regions if you want!
 
 # ================================================
-# 🎛️ Feature Toggles - Your Learning Playground!
+# 🎛️ AWS Services Learning Lab
 # ================================================
-# Toggle these on/off to experiment and see what happens!
+# Toggle individual AWS services to learn what each one does!
 
-features = {
-  enable_self_healing   = true   # 🔧 The magic happens here - try false vs true!
-  enable_observability  = true   # 📊 Beautiful dashboards (~$20/month)
-  enable_rds           = false   # 🗄️  PostgreSQL database (~$15/month extra)
-  enable_chaos_testing = false  # 🧪 Advanced! Try after you understand basics
+aws_services = {
+  enable_eventbridge   = true   # 🔄 Event-driven magic - try false to break automation!
+  enable_sns          = true   # 📧 Email alerts - disable to go silent
+  enable_cloudwatch   = true   # 📊 Basic monitoring - keep this on
+  enable_grafana      = false  # 📈 Pretty dashboards - costs $20/month extra
+  enable_rds          = false  # 🗄️  Database - costs $15/month extra  
+  enable_chaos_testing = false # 🧪 Advanced resilience testing (multiple services)
 }
 
 # ================================================

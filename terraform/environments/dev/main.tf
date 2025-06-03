@@ -59,12 +59,12 @@ module "vpc" {
   azs              = slice(data.aws_availability_zones.available.names, 0, var.networking_config.availability_zones)
   private_subnets  = [for k, v in slice(data.aws_availability_zones.available.names, 0, var.networking_config.availability_zones) : cidrsubnet(var.networking_config.vpc_cidr, 8, k + 1)]
   public_subnets   = [for k, v in slice(data.aws_availability_zones.available.names, 0, var.networking_config.availability_zones) : cidrsubnet(var.networking_config.vpc_cidr, 8, k + 101)]
-  database_subnets = var.features.enable_rds ? [for k, v in slice(data.aws_availability_zones.available.names, 0, var.networking_config.availability_zones) : cidrsubnet(var.networking_config.vpc_cidr, 8, k + 201)] : []
+  database_subnets = var.aws_services.enable_rds ? [for k, v in slice(data.aws_availability_zones.available.names, 0, var.networking_config.availability_zones) : cidrsubnet(var.networking_config.vpc_cidr, 8, k + 201)] : []
 
   enable_nat_gateway = var.networking_config.enable_nat_gateway
   enable_flow_log    = var.networking_config.enable_flow_logs
   
-  create_database_subnet_group = var.features.enable_rds
+  create_database_subnet_group = var.aws_services.enable_rds
 
   # VPC Flow Logs configuration
   flow_log_destination_type                = "cloud-watch-logs"
@@ -124,7 +124,6 @@ module "data_lake" {
 
 # S3 Event Notifications for self-healing
 resource "aws_s3_bucket_notification" "data_events" {
-  count       = var.features.enable_self_healing ? 1 : 0
   bucket      = module.data_lake.s3_bucket_id
   eventbridge = true
 
@@ -135,7 +134,7 @@ resource "aws_s3_bucket_notification" "data_events" {
 # DATABASE - Official RDS Module (Optional)
 # ================================================
 module "database" {
-  count   = var.features.enable_rds ? 1 : 0
+  count   = var.aws_services.enable_rds ? 1 : 0
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 6.0"
 
@@ -181,8 +180,8 @@ module "database" {
 # OBSERVABILITY - Official Grafana Module (Optional)
 # ================================================
 module "grafana" {
-  count   = var.features.enable_observability ? 1 : 0
-  source  = "terraform-aws-modules/managed-grafana/aws"
+  count   = var.aws_services.enable_grafana ? 1 : 0
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.0"
 
   name        = "${var.project_name}-grafana-${random_id.suffix.hex}"
@@ -190,16 +189,11 @@ module "grafana" {
 
   # Essential configuration
   account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
+  authentication_providers = ["SAML"]
   permission_type          = "SERVICE_MANAGED"
 
   data_sources = ["CLOUDWATCH"]
   
-  # Add Prometheus if enabled
-  # data_sources = var.observability_config.enable_prometheus ? 
-  #   ["CLOUDWATCH", "PROMETHEUS"] : 
-  #   ["CLOUDWATCH"]
-
   tags = local.common_tags
 }
 
@@ -207,7 +201,7 @@ module "grafana" {
 # NOTIFICATIONS - Official SNS Module (Optional)
 # ================================================
 module "notifications" {
-  count   = var.features.enable_self_healing ? 1 : 0
+  count   = var.aws_services.enable_sns ? 1 : 0
   source  = "terraform-aws-modules/sns/aws"
   version = "~> 6.0"
 
@@ -227,7 +221,7 @@ module "notifications" {
 # AUTOMATION - Official EventBridge Module (Optional)
 # ================================================
 module "automation" {
-  count   = var.features.enable_self_healing ? 1 : 0
+  count   = var.aws_services.enable_eventbridge ? 1 : 0
   source  = "terraform-aws-modules/eventbridge/aws"
   version = "~> 3.0"
 
@@ -511,7 +505,7 @@ resource "aws_iam_role_policy_attachment" "glue_s3" {
 
 # SNS publish permissions for Glue
 resource "aws_iam_policy" "glue_sns_access" {
-  count = var.features.enable_self_healing && (var.processing_config.enable_data_quality || var.processing_config.enable_remediation) ? 1 : 0
+  count = var.aws_services.enable_sns && (var.processing_config.enable_data_quality || var.processing_config.enable_remediation) ? 1 : 0
   name  = "${var.project_name}-glue-sns-${random_id.suffix.hex}"
 
   policy = jsonencode({
@@ -531,7 +525,7 @@ resource "aws_iam_policy" "glue_sns_access" {
 }
 
 resource "aws_iam_role_policy_attachment" "glue_sns" {
-  count      = var.features.enable_self_healing && (var.processing_config.enable_data_quality || var.processing_config.enable_remediation) ? 1 : 0
+  count      = var.aws_services.enable_sns && (var.processing_config.enable_data_quality || var.processing_config.enable_remediation) ? 1 : 0
   role       = aws_iam_role.glue[0].name
   policy_arn = aws_iam_policy.glue_sns_access[0].arn
 }
@@ -542,7 +536,7 @@ resource "aws_iam_role_policy_attachment" "glue_sns" {
 
 # Database Security Group
 resource "aws_security_group" "database" {
-  count  = var.features.enable_rds ? 1 : 0
+  count  = var.aws_services.enable_rds ? 1 : 0
   name   = "${var.project_name}-db-sg-${random_id.suffix.hex}"
   vpc_id = module.vpc.vpc_id
 
@@ -573,7 +567,7 @@ resource "aws_security_group" "database" {
 
 # Main Self-Healing Dashboard
 resource "aws_cloudwatch_dashboard" "self_healing" {
-  count          = var.features.enable_observability ? 1 : 0
+  count          = var.aws_services.enable_cloudwatch ? 1 : 0
   dashboard_name = "${var.project_name}-dashboard-${random_id.suffix.hex}"
 
   dashboard_body = jsonencode({
@@ -606,7 +600,7 @@ resource "aws_cloudwatch_dashboard" "self_healing" {
         width  = 12
         height = 6
         properties = {
-          metrics = var.features.enable_self_healing ? [
+          metrics = var.aws_services.enable_cloudwatch ? [
             ["AWS/Events", "MatchedEvents", "RuleName", "s3_data_uploaded"]
           ] : []
           period = 300

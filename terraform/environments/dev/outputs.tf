@@ -6,12 +6,12 @@
 # ================================================
 # Success Celebration
 # ================================================
-output "🎉_deployment_success" {
+output "deployment_success" {
   description = "Congratulations! Your self-healing lakehouse is ready"
   value       = "✅ Self-Healing Lakehouse deployed successfully in ${var.aws_region} using S3 Native Locking!"
 }
 
-output "🏗️_bootstrap_integration" {
+output "bootstrap_integration" {
   description = "Bootstrap foundation information"
   value = {
     backend_type     = "S3 Native Locking (Terraform >= 1.6)"
@@ -21,7 +21,7 @@ output "🏗️_bootstrap_integration" {
   }
 }
 
-output "📊_your_lakehouse_details" {
+output "your_lakehouse_details" {
   description = "Essential information about your deployed lakehouse"
   value = {
     project_name    = var.project_name
@@ -36,50 +36,40 @@ output "📊_your_lakehouse_details" {
 # ================================================
 # Quick Access Links
 # ================================================
-output "🔗_quick_links" {
+output "quick_links" {
   description = "Important AWS Console links to explore your lakehouse"
   value = {
     aws_console = "https://${var.aws_region}.console.aws.amazon.com/console/home?region=${var.aws_region}"
     s3_console  = "https://s3.console.aws.amazon.com/s3/buckets/${module.data_lake.s3_bucket_id}?region=${var.aws_region}"
-    glue_console = var.processing_config.enable_crawler ? 
-      "https://${var.aws_region}.console.aws.amazon.com/glue/home?region=${var.aws_region}#catalog:tab=crawlers" : 
-      "Glue crawler not enabled"
+    glue_console = var.processing_config.enable_crawler ? "https://${var.aws_region}.console.aws.amazon.com/glue/home?region=${var.aws_region}#catalog:tab=crawlers" : "Glue crawler not enabled"
     cloudwatch_console = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:"
-    grafana_endpoint = var.features.enable_observability ? 
-      try(module.grafana[0].workspace_endpoint, "Grafana workspace not ready yet") : 
-      "Observability not enabled"
+    grafana_endpoint = var.aws_services.enable_grafana ? try(module.grafana[0].workspace_endpoint, "Grafana workspace not ready yet") : "Observability not enabled"
   }
 }
 
 # ================================================
 # Learning Experiments
 # ================================================
-output "🧪_try_these_experiments" {
+output "try_these_experiments" {
   description = "Hands-on experiments to learn how self-healing works"
   value = {
     upload_test_data = "aws s3 cp your-file.csv s3://${module.data_lake.s3_bucket_id}/raw/"
-    view_s3_events = var.features.enable_self_healing ? 
-      "Check EventBridge rules in AWS Console to see automation triggers" : 
-      "Enable self_healing feature to see event automation"
-    monitor_processing = var.processing_config.enable_crawler ? 
-      "Watch Glue crawler discover your data schema automatically" : 
-      "Enable crawler to see automatic schema discovery"
-    check_notifications = var.features.enable_self_healing ? 
-      "Check your email (${var.self_healing_config.notification_email}) for alerts" : 
-      "Enable self_healing to receive email notifications"
+    view_s3_events = var.aws_services.enable_eventbridge ? "Check EventBridge rules in AWS Console to see automation triggers" : "Enable self_healing feature to see event automation"
+    monitor_processing = var.processing_config.enable_crawler ? "Watch Glue crawler discover your data schema automatically" : "Enable crawler to see automatic schema discovery"
+    check_notifications = var.aws_services.enable_eventbridge ? "Check your email (${var.self_healing_config.notification_email}) for alerts" : "Enable self_healing to receive email notifications"
   }
 }
 
 # ================================================
 # Feature Status
 # ================================================
-output "⚙️_enabled_features" {
+output "enabled_features" {
   description = "Current feature configuration status"
   value = {
-    self_healing_enabled   = var.features.enable_self_healing ? "✅ Active" : "❌ Disabled"
-    observability_enabled  = var.features.enable_observability ? "✅ Active" : "❌ Disabled"
-    database_enabled      = var.features.enable_rds ? "✅ Active" : "❌ Disabled"
-    chaos_testing_enabled = var.features.enable_chaos_testing ? "✅ Active" : "❌ Disabled"
+    self_healing_enabled   = var.aws_services.enable_eventbridge ? "✅ Active" : "❌ Disabled"
+    observability_enabled  = var.aws_services.enable_grafana ? "✅ Active" : "❌ Disabled"
+    database_enabled      = var.aws_services.enable_rds ? "✅ Active" : "❌ Disabled"
+    chaos_testing_enabled = var.aws_services.enable_chaos_testing ? "✅ Active" : "❌ Disabled"
     data_crawler_enabled  = var.processing_config.enable_crawler ? "✅ Active" : "❌ Disabled"
     data_quality_enabled  = var.processing_config.enable_data_quality ? "✅ Active" : "❌ Disabled"
   }
@@ -88,17 +78,14 @@ output "⚙️_enabled_features" {
 # ================================================
 # Cost Information
 # ================================================
-output "💰_estimated_monthly_cost" {
+output "estimated_monthly_cost" {
   description = "Approximate monthly AWS costs for your current configuration"
   value = {
     base_infrastructure = "$5-10 (S3, Glue, CloudWatch basics)"
-    observability_cost = var.features.enable_observability ? "$15-25 (Grafana workspace)" : "$0 (disabled)"
-    database_cost = var.features.enable_rds ? "$15-30 (RDS PostgreSQL ${var.rds_config.instance_class})" : "$0 (disabled)"
+    observability_cost = var.aws_services.enable_grafana ? "$15-25 (Grafana workspace)" : "$0 (disabled)"
+    database_cost = var.aws_services.enable_rds ? "$15-30 (RDS PostgreSQL ${var.rds_config.instance_class})" : "$0 (disabled)"
     data_processing = var.processing_config.enable_data_quality ? "$5-15 (depends on data volume)" : "$0 (disabled)"
-    total_estimate = var.features.enable_observability && var.features.enable_rds ? 
-      "$40-80/month (all features enabled)" : 
-      var.features.enable_observability ? "$25-50/month (with monitoring)" :
-      "$10-25/month (basic setup)"
+    total_estimate = var.aws_services.enable_grafana && var.aws_services.enable_rds ? "$40-80/month (all features enabled)" : var.aws_services.enable_grafana ? "$25-50/month (with monitoring)" : "$10-25/month (basic setup)"
     cost_optimization_tip = "💡 Disable unused features in terraform.tfvars to reduce costs"
   }
 }
@@ -106,14 +93,12 @@ output "💰_estimated_monthly_cost" {
 # ================================================
 # Next Steps Guide
 # ================================================
-output "🎯_learning_roadmap" {
+output "learning_roadmap" {
   description = "Suggested next steps for your learning journey"
   value = {
     step_1_data_upload = "Upload sample CSV files to s3://${module.data_lake.s3_bucket_id}/raw/ and watch automation"
     step_2_feature_toggle = "Try changing feature flags in terraform.tfvars and run 'terraform apply'"
-    step_3_monitoring = var.features.enable_observability ? 
-      "Explore Grafana dashboards and CloudWatch metrics" : 
-      "Enable observability features to see monitoring in action"
+    step_3_monitoring = var.aws_services.enable_grafana ? "Explore Grafana dashboards and CloudWatch metrics" : "Enable observability features to see monitoring in action"
     step_4_scaling = "Try different worker_type and number_of_workers in processing_config"
     step_5_advanced = "Enable chaos_testing feature for advanced resilience experiments"
     step_6_enterprise = "Change learning_preset to 'enterprise' for production-ready configuration"
@@ -124,7 +109,7 @@ output "🎯_learning_roadmap" {
 # ================================================
 # Troubleshooting Resources
 # ================================================
-output "🔧_troubleshooting" {
+output "troubleshooting" {
   description = "Helpful commands and resources for troubleshooting"
   value = {
     check_resources = "terraform state list | grep -E '(bucket|glue|grafana)'"
@@ -139,7 +124,7 @@ output "🔧_troubleshooting" {
 # ================================================
 # Resource Inventory
 # ================================================
-output "📋_resource_summary" {
+output "resource_summary" {
   description = "Summary of created AWS resources"
   value = {
     foundation = {
@@ -152,7 +137,7 @@ output "📋_resource_summary" {
       vpc_id = module.vpc.vpc_id
       public_subnets = length(module.vpc.public_subnets)
       private_subnets = length(module.vpc.private_subnets)
-      database_subnets = var.features.enable_rds ? length(module.vpc.database_subnets) : 0
+      database_subnets = var.aws_services.enable_rds ? length(module.vpc.database_subnets) : 0
     }
     storage = {
       data_lake_bucket = module.data_lake.s3_bucket_id
@@ -167,19 +152,19 @@ output "📋_resource_summary" {
       worker_configuration = "${var.processing_config.worker_type} x ${var.processing_config.number_of_workers}"
     }
     automation = {
-      eventbridge_rules = var.features.enable_self_healing ? length(module.automation[0].eventbridge_rule_arns) : 0
-      sns_topic = var.features.enable_self_healing ? module.notifications[0].topic_arn : "not created"
-      notification_email = var.features.enable_self_healing ? var.self_healing_config.notification_email : "not configured"
+      eventbridge_rules = var.aws_services.enable_eventbridge ? length(module.automation[0].eventbridge_rule_arns) : 0
+      sns_topic = var.aws_services.enable_eventbridge ? module.notifications[0].topic_arn : "not created"
+      notification_email = var.aws_services.enable_eventbridge ? var.self_healing_config.notification_email : "not configured"
     }
     observability = {
-      grafana_workspace = var.features.enable_observability ? "created" : "not created"
-      cloudwatch_dashboard = var.features.enable_observability ? aws_cloudwatch_dashboard.self_healing[0].dashboard_name : "not created"
+      grafana_workspace = var.aws_services.enable_grafana ? "created" : "not created"
+      cloudwatch_dashboard = var.aws_services.enable_grafana ? aws_cloudwatch_dashboard.self_healing[0].dashboard_name : "not created"
       enhanced_monitoring = var.observability_config.enable_enhanced_monitoring
     }
     database = {
-      rds_instance = var.features.enable_rds ? module.database[0].db_instance_identifier : "not created"
-      instance_class = var.features.enable_rds ? var.rds_config.instance_class : "n/a"
-      multi_az = var.features.enable_rds ? var.rds_config.multi_az : false
+      rds_instance = var.aws_services.enable_rds ? module.database[0].db_instance_identifier : "not created"
+      instance_class = var.aws_services.enable_rds ? var.rds_config.instance_class : "n/a"
+      multi_az = var.aws_services.enable_rds ? var.rds_config.multi_az : false
     }
   }
 }

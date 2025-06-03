@@ -9,7 +9,7 @@
 variable "project_name" {
   description = "Name of your lakehouse project (used for resource naming)"
   type        = string
-  default     = "my-learning-lakehouse"
+  default     = "learning-lakehouse"
 
   validation {
     condition     = length(var.project_name) <= 20 && can(regex("^[a-z0-9-]+$", var.project_name))
@@ -40,27 +40,37 @@ variable "aws_region" {
 }
 
 # ================================================
-# Feature Toggles - Experiment Here!
+# AWS Services Toggles - Learn Each Service Individually!
 # ================================================
-variable "features" {
-  description = "Feature toggles for learning and experimentation"
+variable "aws_services" {
+  description = "Individual AWS services for hands-on learning - toggle each to see what it does!"
   type = object({
-    enable_self_healing   = bool
-    enable_observability  = bool
-    enable_rds           = bool
-    enable_chaos_testing = bool
+    enable_eventbridge   = bool  # Event-driven automation (file upload triggers)
+    enable_sns          = bool  # Simple Notification Service (email alerts)
+    enable_cloudwatch   = bool  # Monitoring dashboards and metrics
+    enable_grafana      = bool  # Advanced visualization and dashboards
+    enable_rds          = bool  # Relational Database Service
+    enable_chaos_testing = bool # Advanced: Resilience testing (FIS + Lambda)
   })
   default = {
-    enable_self_healing   = true   # Core self-healing capabilities
-    enable_observability  = true   # Monitoring dashboards (~$20/month)
-    enable_rds           = false   # PostgreSQL database (~$15/month)
-    enable_chaos_testing = false  # Advanced chaos engineering
+    enable_eventbridge   = true   # 🔄 Try toggling this - see how automation breaks!
+    enable_sns          = true   # 📧 Disable to stop email notifications
+    enable_cloudwatch   = true   # 📊 Core AWS monitoring - always useful
+    enable_grafana      = false  # 📈 Advanced dashboards - costs extra (~$20/month)
+    enable_rds          = false  # 🗄️  Database - costs extra (~$15/month)
+    enable_chaos_testing = false # 🧪 Advanced resilience testing (multiple services)
   }
 
   validation {
-    condition = can(var.features.enable_self_healing) && can(var.features.enable_observability) && 
-                can(var.features.enable_rds) && can(var.features.enable_chaos_testing)
-    error_message = "All feature flags must be boolean values."
+    condition = alltrue([
+      var.aws_services.enable_eventbridge != null,
+      var.aws_services.enable_sns != null,
+      var.aws_services.enable_cloudwatch != null,
+      var.aws_services.enable_grafana != null,
+      var.aws_services.enable_rds != null,
+      var.aws_services.enable_chaos_testing != null
+    ])
+    error_message = "All AWS service flags must be boolean values."
   }
 }
 
@@ -204,9 +214,11 @@ variable "self_healing_config" {
   }
 
   validation {
-    condition = var.self_healing_config.alert_thresholds.data_quality_failures > 0 &&
-                var.self_healing_config.alert_thresholds.storage_threshold_gb > 0 &&
-                var.self_healing_config.alert_thresholds.error_rate_percent > 0
+    condition = (
+      var.self_healing_config.alert_thresholds.data_quality_failures > 0 &&
+      var.self_healing_config.alert_thresholds.storage_threshold_gb > 0 &&
+      var.self_healing_config.alert_thresholds.error_rate_percent > 0
+    )
     error_message = "All alert thresholds must be positive numbers."
   }
 }
@@ -281,5 +293,20 @@ variable "rds_config" {
   validation {
     condition     = var.rds_config.backup_retention >= 0 && var.rds_config.backup_retention <= 35
     error_message = "Backup retention must be between 0 and 35 days."
+  }
+}
+
+# ================================================
+# Alert Email (for backward compatibility)
+# ================================================
+variable "alert_email" {
+  description = "Email address for alerts (backward compatibility - use self_healing_config.notification_email instead)"
+  type        = string
+  default     = "your-email@example.com"
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.alert_email))
+    error_message = "The alert_email must be a valid email address format."
   }
 }

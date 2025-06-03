@@ -1,0 +1,114 @@
+# ================================================
+# 🎓 Learning Configuration File
+# ================================================
+# terraform/environments/dev/terraform.tfvars.example
+# Copy this to terraform.tfvars and customize for your learning!
+
+# ================================================
+# 🏷️ Your Project Identity
+# ================================================
+project_name = "my-learning-lakehouse"  # Give your project a unique name!
+environment  = "dev"                    # Keep as 'dev' for learning
+aws_region   = "us-east-1"             # Try different regions if you want!
+
+# ================================================
+# 🎛️ Feature Toggles - Your Learning Playground!
+# ================================================
+# Toggle these on/off to experiment and see what happens!
+
+features = {
+  enable_self_healing   = true   # 🔧 The magic happens here - try false vs true!
+  enable_observability  = true   # 📊 Beautiful dashboards (~$20/month)
+  enable_rds           = false   # 🗄️  PostgreSQL database (~$15/month extra)
+  enable_chaos_testing = false  # 🧪 Advanced! Try after you understand basics
+}
+
+# ================================================
+# 🚀 Quick Learning Presets
+# ================================================
+# Choose ONE of these for instant configuration:
+
+learning_preset = "basic"          # 💰 Cheapest - core features only (~$10/month)
+# learning_preset = "intermediate"   # 📊 Balanced - adds monitoring (~$30/month)
+# learning_preset = "advanced"       # 🔥 Full features - more expensive (~$60/month)
+# learning_preset = "enterprise"     # 🏢 Production-ready - most expensive (~$100/month)
+# learning_preset = "cost-optimized" # 💸 Absolute minimum cost (~$5/month)
+
+# ================================================
+# 🎯 Your Contact Information
+# ================================================
+self_healing_config = {
+  notification_email      = "your-email@gmail.com"  # 📧 CHANGE THIS TO YOUR EMAIL!
+  enable_auto_remediation = true                     # Let the system fix itself
+  alert_thresholds = {
+    data_quality_failures = 3    # Send alert after 3 consecutive failures
+    storage_threshold_gb   = 100  # Alert when storage exceeds 100GB
+    error_rate_percent     = 5    # Alert when error rate exceeds 5%
+  }
+}
+
+# ================================================
+# 🏗️ Advanced Customization (Optional)
+# ================================================
+# Only change these if you want to experiment with specific settings!
+
+# Data Processing Performance Tuning
+processing_config = {
+  enable_crawler      = true
+  enable_data_quality = true
+  enable_remediation  = true
+  glue_version       = "4.0"
+  worker_type        = "G.1X"    # 💡 Try: "G.1X" (cheap), "G.2X" (fast), "Standard" (balanced)
+  number_of_workers  = 2         # 💡 Try: 2 (small), 5 (medium), 10 (large datasets)
+  schedule_crawler   = "cron(0 6,12,18 ? * MON-FRI *)"  # Run 3x daily on weekdays
+  schedule_quality   = "cron(0 2,8,14,20 * * ? *)"      # Run 4x daily
+}
+
+# Network Configuration
+networking_config = {
+  vpc_cidr           = "10.0.0.0/16"
+  enable_nat_gateway = false  # 💰 false = cheaper, true = more secure but costs extra
+  enable_flow_logs   = true   # Good for learning about network traffic
+  availability_zones = 2      # Multi-AZ for reliability
+}
+
+# Storage Configuration  
+data_lake_config = {
+  enable_versioning = true
+  enable_lifecycle  = true   # Automatically move old data to cheaper storage
+  enable_encryption = true   # Always encrypt your data!
+  storage_classes   = ["STANDARD", "STANDARD_IA", "GLACIER"]
+}
+
+# Monitoring Configuration
+observability_config = {
+  enable_prometheus         = false  # 💰 Keep false in dev to save costs
+  enable_grafana           = true    # Pretty dashboards for learning
+  enable_enhanced_monitoring = true
+  dashboard_types          = ["main", "detailed"]  # Try adding "cost", "security"
+  retention_days           = 7       # How long to keep logs
+}
+
+# Database Settings (only used if enable_rds = true above)
+rds_config = {
+  instance_class    = "db.t3.micro"  # 💰 Smallest size for learning
+  allocated_storage = 20             # GB of storage
+  engine_version    = "15.7"         # PostgreSQL version
+  multi_az         = false           # 💰 Single AZ saves money in dev
+  backup_retention = 7               # Days to keep database backups
+}
+
+# ================================================
+# 💡 Learning Tips & Next Steps
+# ================================================
+# 
+# 1. 🚀 Start here: Deploy with current settings using `make apply`
+# 2. 📊 Upload data: aws s3 cp your-file.csv s3://YOUR-BUCKET-NAME/raw/
+# 3. 🔍 Watch magic: Check AWS Console for automatic processing
+# 4. 🧪 Experiment: Change feature toggles and redeploy
+# 5. 📈 Scale up: Try different worker types and sizes
+# 6. 💰 Monitor costs: Check AWS Cost Explorer regularly
+# 7. 🧹 Clean up: Run `make clean` when done learning
+#
+# Remember: Every change you make here teaches you about infrastructure!
+# Don't be afraid to experiment - that's how you learn! 🎓

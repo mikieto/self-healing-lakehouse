@@ -110,18 +110,19 @@ module "processing_label" {
   context = module.code_label.context
 }
 
-# Monitoring Label (Grafana, Prometheus, CloudWatch)
+# Monitoring Label (Grafana, Prometheus, CloudWatch) - AWS Limits Optimized
 module "monitoring_label" {
   source  = "cloudposse/label/null" 
   version = "~> 0.25"
 
-  attributes = ["monitoring"]
+  attributes = ["grafana"]
   
   tags = {
     Tier = "observability"
   }
 
-  context = module.observability_label.context
+  # Direct connection to base label (skip observability layer)
+  context = module.label.context
 }
 
 # ===== OUTPUTS =====

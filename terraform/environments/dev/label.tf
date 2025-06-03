@@ -14,22 +14,22 @@ module "label" {
   version = "~> 0.25"
 
   # Core naming components
-  namespace = "self-healing" 
+  namespace   = "self-healing"
   environment = var.environment # "dev" 
-  name = "lakehouse"
+  name        = "lakehouse"
 
   # Consistent delimiter
   delimiter = "-"
 
   # Enterprise tags
   tags = {
-    Project       = "self-healing-lakehouse"
-    Owner         = "data-engineering"
-    BusinessUnit  = "analytics"
-    CostCenter    = "data-platform"
-    Architecture  = "three-pillars"
-    IaC           = "terraform"
-    Repository    = "self-healing-lakehouse"
+    Project      = "self-healing-lakehouse"
+    Owner        = "data-engineering"
+    BusinessUnit = "analytics"
+    CostCenter   = "data-platform"
+    Architecture = "three-pillars"
+    IaC          = "terraform"
+    Repository   = "self-healing-lakehouse"
   }
 }
 
@@ -41,7 +41,7 @@ module "code_label" {
   version = "~> 0.25"
 
   attributes = ["code"]
-  
+
   tags = {
     Pillar    = "code"
     Component = "infrastructure"
@@ -56,7 +56,7 @@ module "observability_label" {
   version = "~> 0.25"
 
   attributes = ["observability"]
-  
+
   tags = {
     Pillar    = "observability"
     Component = "monitoring"
@@ -71,7 +71,7 @@ module "guard_label" {
   version = "~> 0.25"
 
   attributes = ["guard"]
-  
+
   tags = {
     Pillar    = "guard"
     Component = "automation"
@@ -88,7 +88,7 @@ module "storage_label" {
   version = "~> 0.25"
 
   attributes = ["storage"]
-  
+
   tags = {
     Tier = "data"
   }
@@ -102,7 +102,7 @@ module "processing_label" {
   version = "~> 0.25"
 
   attributes = ["processing"]
-  
+
   tags = {
     Tier = "compute"
   }
@@ -112,11 +112,11 @@ module "processing_label" {
 
 # Monitoring Label (Grafana, Prometheus, CloudWatch) - AWS Limits Optimized
 module "monitoring_label" {
-  source  = "cloudposse/label/null" 
+  source  = "cloudposse/label/null"
   version = "~> 0.25"
 
   attributes = ["grafana"]
-  
+
   tags = {
     Tier = "observability"
   }
@@ -130,28 +130,28 @@ output "label_info" {
   description = "Cloud Posse label system information"
   value = {
     # Main label outputs
-    id                = module.label.id
-    name              = module.label.name
-    namespace         = module.label.namespace
-    environment       = module.label.environment
-    tags              = module.label.tags
+    id                   = module.label.id
+    name                 = module.label.name
+    namespace            = module.label.namespace
+    environment          = module.label.environment
+    tags                 = module.label.tags
     tags_as_list_of_maps = module.label.tags_as_list_of_maps
-    
+
     # Pillar-specific IDs
-    code_id           = module.code_label.id
-    observability_id  = module.observability_label.id
-    guard_id          = module.guard_label.id
-    
+    code_id          = module.code_label.id
+    observability_id = module.observability_label.id
+    guard_id         = module.guard_label.id
+
     # Component-specific IDs
-    storage_id        = module.storage_label.id
-    processing_id     = module.processing_label.id
-    monitoring_id     = module.monitoring_label.id
-    
+    storage_id    = module.storage_label.id
+    processing_id = module.processing_label.id
+    monitoring_id = module.monitoring_label.id
+
     # Usage examples
     examples = {
-      s3_bucket_name    = module.storage_label.id
-      glue_job_name     = module.processing_label.id
-      grafana_name      = module.monitoring_label.id
+      s3_bucket_name = module.storage_label.id
+      glue_job_name  = module.processing_label.id
+      grafana_name   = module.monitoring_label.id
     }
   }
 }

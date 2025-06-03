@@ -8,11 +8,12 @@
 
 locals {
   # Common references to avoid repetition
-  bucket_id           = module.lakehouse_storage.s3_bucket_id
-  bucket_arn          = module.lakehouse_storage.s3_bucket_arn
+  bucket_id  = module.lakehouse_storage.s3_bucket_id
+  bucket_arn = module.lakehouse_storage.s3_bucket_arn
   # Fixed: Use references from Cloud Posse modules
-  grafana_endpoint    = try(module.grafana.workspace_endpoint, "not_available")
-  prometheus_endpoint = try(aws_prometheus_workspace.main[0].prometheus_endpoint, "not_enabled_in_dev")
+  # grafana_endpoint    = try(module.grafana.workspace_endpoint, "not_available")
+  grafana_endpoint = "DISABLED_SSO_REQUIRED"
+  prometheus_endpoint = try(module.prometheus.prometheus_endpoint, "not_enabled_in_dev")
 }
 
 # === CORE INFRASTRUCTURE ===
@@ -72,8 +73,8 @@ output "console_access" {
     grafana_workspace    = local.grafana_endpoint
     prometheus_metrics   = local.prometheus_endpoint
     cloudwatch_dashboard = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouseDashboard"
-    glue_jobs           = "https://console.aws.amazon.com/glue/home?region=${var.aws_region}#etl:tab=jobs"
-    eventbridge_rules   = "https://console.aws.amazon.com/events/home?region=${var.aws_region}#/rules"
+    glue_jobs            = "https://console.aws.amazon.com/glue/home?region=${var.aws_region}#etl:tab=jobs"
+    eventbridge_rules    = "https://console.aws.amazon.com/events/home?region=${var.aws_region}#/rules"
   }
 }
 
@@ -92,8 +93,8 @@ output "system_architecture" {
       prometheus           = local.prometheus_endpoint
     }
     guard_pillar = {
-      data_quality_job        = aws_glue_job.data_quality.name
-      eventbridge_automation  = module.self_healing_eventbridge.eventbridge_rule_arns["new_data_uploaded"]
+      data_quality_job       = aws_glue_job.data_quality.name
+      eventbridge_automation = module.self_healing_eventbridge.eventbridge_rule_arns["new_data_uploaded"]
       sns_alerts             = module.healing_alerts_sns.topic_arn
     }
   }

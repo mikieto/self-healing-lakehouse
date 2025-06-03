@@ -2,63 +2,107 @@
 # [OBSERVABILITY PILLAR] AWS Managed Grafana - terraform-aws-modules
 # ====================================================
 # Purpose: Enterprise Grafana workspace with official modules
-# Benefit: Proven stability + Cloud Posse naming
+# Note: COMPLETELY DISABLED - SSO setup required
 # Three Pillars Role: Real-time dashboards and monitoring
-# Learning Value: Shows hybrid approach (official modules + Cloud Posse naming)
+# Learning Value: Shows conditional resource creation
 
 # terraform/environments/dev/grafana.tf
 
-# ===== TERRAFORM-AWS-MODULES GRAFANA =====
-module "grafana" {
-  source  = "terraform-aws-modules/managed-service-grafana/aws"
-  version = "~> 2.0"
+# ===== GRAFANA MODULE - COMPLETELY DISABLED =====
+# AWS Managed Grafana requires AWS SSO setup
+# Uncomment entire block when SSO is configured
 
-  # 🌩️ Cloud Posse naming integration
-  name = module.monitoring_label.id
+# module "grafana" {
+#   source  = "terraform-aws-modules/managed-service-grafana/aws"
+#   version = "~> 2.0"
+# 
+#   # 🌩️ Cloud Posse naming integration
+#   name = module.monitoring_label.id
+# 
+#   # Grafana workspace configuration
+#   account_access_type      = "CURRENT_ACCOUNT"
+#   authentication_providers = ["AWS_SSO"]
+#   permission_type          = "SERVICE_MANAGED"
+# 
+#   # Essential data sources
+#   data_sources = [
+#     "CLOUDWATCH",
+#     "PROMETHEUS"
+#   ]
+# 
+#   # Notification destinations
+#   notification_destinations = ["SNS"]
+# 
+#   # 🌩️ Cloud Posse tags
+#   tags = module.monitoring_label.tags
+# }
 
-  # Grafana workspace configuration
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
+# ===== DEVELOPMENT ALTERNATIVE - CLOUDWATCH DASHBOARDS =====
+# For development, use CloudWatch dashboards instead of Grafana
 
-  # Essential data sources
-  data_sources = [
-    "CLOUDWATCH",
-    "PROMETHEUS"
-  ]
+resource "aws_cloudwatch_dashboard" "dev_monitoring" {
+  dashboard_name = "SelfHealingLakehouse-Dev-Dashboard"
 
-  # Notification destinations
-  notification_destinations = ["SNS"]
-
-  # 🌩️ Cloud Posse tags
-  tags = module.monitoring_label.tags
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/S3", "NumberOfObjects", "BucketName", module.lakehouse_storage.s3_bucket_id, "StorageType", "AllStorageTypes"]
+          ]
+          period = 300
+          stat   = "Average"
+          region = var.aws_region
+          title  = "📊 Data Lake Objects Count (Dev)"
+        }
+      },
+      {
+        type   = "text"
+        x      = 0
+        y      = 6
+        width  = 24
+        height = 3
+        properties = {
+          markdown = "## 🚀 Self-Healing Lakehouse Development Monitoring\n\n**Note**: Grafana requires AWS SSO setup. Using CloudWatch dashboards for development.\n\n**To enable Grafana**: Set up AWS SSO and uncomment module in grafana.tf"
+        }
+      }
+    ]
+  })
 }
 
-# ===== OUTPUTS =====
+# ===== OUTPUTS - DISABLED GRAFANA =====
 output "grafana_info" {
-  description = "Terraform AWS Modules Grafana workspace information"
+  description = "Grafana workspace information (DISABLED - SSO required)"
   value = {
-    # Core Grafana info
-    endpoint = module.grafana.workspace_endpoint
-    id       = module.grafana.workspace_id
-    arn      = module.grafana.workspace_arn
-    
-    # IAM role
-    role_arn = module.grafana.workspace_iam_role_arn
-    
+    # All Grafana endpoints disabled
+    endpoint = "DISABLED_SSO_REQUIRED"
+    id       = "DISABLED_SSO_REQUIRED"
+    arn      = "DISABLED_SSO_REQUIRED"
+    role_arn = "DISABLED_SSO_REQUIRED"
+
+    # Development alternative
+    dev_dashboard = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouse-Dev-Dashboard"
+
     # URLs
     console_url = "https://console.aws.amazon.com/grafana/home?region=${var.aws_region}#/workspaces"
+
+    # Status
+    status = "COMPLETELY_DISABLED_SSO_REQUIRED"
     
-    # 🌩️ Cloud Posse naming
-    name = module.monitoring_label.id
-    tags = module.monitoring_label.tags
+    # Instructions
+    enable_instructions = "1. Setup AWS SSO, 2. Uncomment module in grafana.tf, 3. terraform apply"
     
-    # 🎯 Hybrid approach benefits
+    # 🎯 Current approach
     features = {
-      module_provider  = "terraform-aws-modules"
-      naming_provider  = "cloudposse"
-      stability        = "high"
-      custom_code      = "minimal"
+      grafana_enabled   = false
+      alternative       = "cloudwatch_dashboards"
+      sso_requirement   = "aws_sso_setup_needed"
+      current_solution  = "cloudwatch_dashboard_created"
     }
   }
 }

@@ -1,97 +1,29 @@
 # ====================================================
-# [OBSERVABILITY PILLAR] Real-time System Monitoring
+# [OBSERVABILITY PILLAR] CloudWatch Monitoring
 # ====================================================
-# Purpose: Comprehensive visibility into system health and performance
-# Benefit: Immediate awareness of issues and system state changes
-# Three Pillars Role: Early detection enables rapid response and recovery
-# Learning Value: Shows production-ready monitoring patterns
+# Purpose: CloudWatch dashboards and alarms for monitoring
+# Benefit: AWS native monitoring with custom dashboards
+# Three Pillars Role: Real-time alerting and visualization
+# Learning Value: Shows CloudWatch integration patterns
 
-# terraform/environments/dev/observability.tf
+# terraform/environments/dev/cloudwatch.tf
 
-# Local variables for configuration
+# Local variables for CloudWatch configuration
 locals {
-  observability_config = {
-    name_prefix = "lakehouse-obs-${random_id.bucket_suffix.hex}"
+  cloudwatch_config = {
+    name_prefix = "lakehouse-cw-${random_id.bucket_suffix.hex}"
     tags = {
-      Name        = "lakehouse-observability"
+      Name        = "lakehouse-cloudwatch"
       Purpose     = "self-healing-lakehouse"
       Environment = var.environment
+      Component   = "observability"
+      Pillar      = "observability"
     }
   }
 }
 
-# Only create Prometheus workspace in production
-resource "aws_prometheus_workspace" "main" {
-  count = var.environment == "prod" ? 1 : 0
-  alias = local.observability_config.name_prefix
-
-  logging_configuration {
-    log_group_arn = "${aws_cloudwatch_log_group.prometheus[0].arn}:*"
-  }
-
-  tags = local.observability_config.tags
-}
-
-resource "aws_cloudwatch_log_group" "prometheus" {
-  count             = var.environment == "prod" ? 1 : 0
-  name              = "/aws/prometheus/${local.observability_config.name_prefix}"
-  retention_in_days = 7
-
-  tags = local.observability_config.tags
-}
-
-# ===== GRAFANA WORKSPACE =====
-resource "aws_grafana_workspace" "main" {
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["SAML"]
-  permission_type          = "SERVICE_MANAGED"
-  role_arn                 = aws_iam_role.grafana.arn
-
-  name        = local.observability_config.name_prefix
-  description = "Self-Healing Lakehouse Observability Dashboard"
-
-  # Essential data sources only
-  data_sources = [
-    "PROMETHEUS",
-    "CLOUDWATCH"
-  ]
-
-  tags = local.observability_config.tags
-}
-
-# ===== IAM ROLES =====
-resource "aws_iam_role" "grafana" {
-  name = "${local.observability_config.name_prefix}-grafana-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "grafana.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.observability_config.tags
-}
-
-# Essential Grafana permissions
-resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
-  role       = aws_iam_role.grafana.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonGrafanaCloudWatchAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "grafana_prometheus" {
-  role       = aws_iam_role.grafana.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonPrometheusQueryAccess"
-}
-
 # ===== CLOUDWATCH DASHBOARDS =====
-# Main Self-Healing Dashboard (keeps existing name)
+# Main Self-Healing Dashboard (keeps existing name for compatibility)
 resource "aws_cloudwatch_dashboard" "self_healing" {
   dashboard_name = "SelfHealingLakehouseDashboard"
 
@@ -138,11 +70,12 @@ resource "aws_cloudwatch_dashboard" "self_healing" {
       }
     ]
   })
+
 }
 
 # Enhanced Dashboard for detailed monitoring
 resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
-  dashboard_name = "${local.observability_config.name_prefix}-detailed"
+  dashboard_name = "${local.cloudwatch_config.name_prefix}-detailed"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -202,12 +135,13 @@ resource "aws_cloudwatch_dashboard" "self_healing_enhanced" {
       }
     ]
   })
+
 }
 
-# ===== ESSENTIAL CLOUDWATCH ALARMS =====
+# ===== CLOUDWATCH METRIC ALARMS =====
 # Data Quality Failure Alarm
 resource "aws_cloudwatch_metric_alarm" "data_quality_failures" {
-  alarm_name          = "${local.observability_config.name_prefix}-dq-failures"
+  alarm_name          = "${local.cloudwatch_config.name_prefix}-dq-failures"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "glue.driver.aggregate.numFailedStages"
@@ -224,12 +158,12 @@ resource "aws_cloudwatch_metric_alarm" "data_quality_failures" {
   alarm_actions = [module.healing_alerts_sns.topic_arn]
   ok_actions    = [module.healing_alerts_sns.topic_arn]
 
-  tags = local.observability_config.tags
+  tags = local.cloudwatch_config.tags
 }
 
 # S3 Data Lake Monitoring 
 resource "aws_cloudwatch_metric_alarm" "s3_object_threshold" {
-  alarm_name          = "${local.observability_config.name_prefix}-s3-data"
+  alarm_name          = "${local.cloudwatch_config.name_prefix}-s3-data"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "NumberOfObjects"
@@ -246,21 +180,13 @@ resource "aws_cloudwatch_metric_alarm" "s3_object_threshold" {
 
   alarm_actions = [module.healing_alerts_sns.topic_arn]
 
-  tags = local.observability_config.tags
+  tags = local.cloudwatch_config.tags
 }
 
 # ===== OUTPUTS =====
-output "observability_enhanced" {
-  description = "Balanced observability configuration"
+output "cloudwatch_info" {
+  description = "CloudWatch monitoring information"
   value = {
-    grafana_workspace = {
-      endpoint = aws_grafana_workspace.main.endpoint
-      id       = aws_grafana_workspace.main.id
-    }
-    prometheus = {
-      endpoint     = try(aws_prometheus_workspace.main[0].prometheus_endpoint, "not_enabled_in_dev")
-      workspace_id = try(aws_prometheus_workspace.main[0].id, "not_enabled_in_dev")
-    }
     dashboards = {
       main     = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=SelfHealingLakehouseDashboard"
       detailed = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.self_healing_enhanced.dashboard_name}"
@@ -269,5 +195,6 @@ output "observability_enhanced" {
       data_quality  = aws_cloudwatch_metric_alarm.data_quality_failures.arn
       s3_monitoring = aws_cloudwatch_metric_alarm.s3_object_threshold.arn
     }
+    console_url = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:"
   }
 }

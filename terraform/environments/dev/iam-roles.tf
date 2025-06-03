@@ -20,7 +20,7 @@ module "glue_iam_role" {
   namespace = "lakehouse"
   stage     = var.environment
   name      = "glue"
-  
+
   # Standard Cloud Posse attributes
   attributes = ["data", "processing"]
   delimiter  = "-"
@@ -63,7 +63,7 @@ data "aws_iam_policy_document" "glue_s3_access" {
   statement {
     sid    = "S3DataLakeAccess"
     effect = "Allow"
-    
+
     actions = [
       "s3:GetObject",
       "s3:PutObject",
@@ -72,7 +72,7 @@ data "aws_iam_policy_document" "glue_s3_access" {
       "s3:GetBucketLocation",
       "s3:GetBucketVersioning"
     ]
-    
+
     resources = [
       module.lakehouse_storage.s3_bucket_arn,
       "${module.lakehouse_storage.s3_bucket_arn}/*"
@@ -82,13 +82,13 @@ data "aws_iam_policy_document" "glue_s3_access" {
   statement {
     sid    = "S3TempAccess"
     effect = "Allow"
-    
+
     actions = [
       "s3:GetObject",
       "s3:PutObject",
       "s3:DeleteObject"
     ]
-    
+
     resources = [
       "${module.lakehouse_storage.s3_bucket_arn}/temp/*",
       "${module.lakehouse_storage.s3_bucket_arn}/scripts/*"
@@ -101,11 +101,11 @@ data "aws_iam_policy_document" "glue_sns_access" {
   statement {
     sid    = "SNSNotificationAccess"
     effect = "Allow"
-    
+
     actions = [
       "sns:Publish"
     ]
-    
+
     resources = [
       module.healing_alerts_sns.topic_arn
     ]
@@ -124,7 +124,7 @@ module "eventbridge_iam_role" {
   namespace = "lakehouse"
   stage     = var.environment
   name      = "eventbridge"
-  
+
   attributes = ["automation"]
 
   # Required argument
@@ -152,13 +152,13 @@ data "aws_iam_policy_document" "eventbridge_access" {
   statement {
     sid    = "GlueJobExecution"
     effect = "Allow"
-    
+
     actions = [
       "glue:StartJobRun",
       "glue:GetJobRun",
       "glue:GetJobRuns"
     ]
-    
+
     resources = [
       "arn:aws:glue:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:job/*"
     ]
@@ -167,11 +167,11 @@ data "aws_iam_policy_document" "eventbridge_access" {
   statement {
     sid    = "SNSPublish"
     effect = "Allow"
-    
+
     actions = [
       "sns:Publish"
     ]
-    
+
     resources = [
       module.healing_alerts_sns.topic_arn
     ]
@@ -189,7 +189,7 @@ locals {
     iam_role_name = module.glue_iam_role.name
     iam_role_id   = module.glue_iam_role.id
   }
-  
+
   eventbridge_iam_role = {
     iam_role_arn  = module.eventbridge_iam_role.arn
     iam_role_name = module.eventbridge_iam_role.name
@@ -202,14 +202,14 @@ output "iam_roles_info" {
   description = "Cloud Posse IAM roles information"
   value = {
     glue_role = {
-      arn          = module.glue_iam_role.arn
-      name         = module.glue_iam_role.name
-      id           = module.glue_iam_role.id
+      arn  = module.glue_iam_role.arn
+      name = module.glue_iam_role.name
+      id   = module.glue_iam_role.id
     }
     eventbridge_role = {
-      arn          = module.eventbridge_iam_role.arn
-      name         = module.eventbridge_iam_role.name
-      id           = module.eventbridge_iam_role.id
+      arn  = module.eventbridge_iam_role.arn
+      name = module.eventbridge_iam_role.name
+      id   = module.eventbridge_iam_role.id
     }
     cloud_posse_features = {
       naming_convention = "namespace-stage-name-attributes"

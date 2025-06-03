@@ -93,16 +93,16 @@ output "grafana_info" {
 
     # Status
     status = "COMPLETELY_DISABLED_SSO_REQUIRED"
-    
+
     # Instructions
     enable_instructions = "1. Setup AWS SSO, 2. Uncomment module in grafana.tf, 3. terraform apply"
-    
+
     # 🎯 Current approach
     features = {
-      grafana_enabled   = false
-      alternative       = "cloudwatch_dashboards"
-      sso_requirement   = "aws_sso_setup_needed"
-      current_solution  = "cloudwatch_dashboard_created"
+      grafana_enabled  = false
+      alternative      = "cloudwatch_dashboards"
+      sso_requirement  = "aws_sso_setup_needed"
+      current_solution = "cloudwatch_dashboard_created"
     }
   }
 }

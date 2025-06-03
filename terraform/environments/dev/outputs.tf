@@ -12,7 +12,7 @@ locals {
   bucket_arn = module.lakehouse_storage.s3_bucket_arn
   # Fixed: Use references from Cloud Posse modules
   # grafana_endpoint    = try(module.grafana.workspace_endpoint, "not_available")
-  grafana_endpoint = "DISABLED_SSO_REQUIRED"
+  grafana_endpoint    = "DISABLED_SSO_REQUIRED"
   prometheus_endpoint = try(module.prometheus.prometheus_endpoint, "not_enabled_in_dev")
 }
 

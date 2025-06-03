@@ -37,7 +37,7 @@ module "prometheus" {
 
 # ===== CONDITIONAL LOG GROUP (if not handled by module) =====
 resource "aws_cloudwatch_log_group" "prometheus" {
-  count             = var.environment == "prod" && !module.prometheus.enabled ? 1 : 0
+  count             = var.environment == "prod" ? 1 : 0
   name              = "/aws/prometheus/${module.prometheus_label.id}"
   retention_in_days = 7
 

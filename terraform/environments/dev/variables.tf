@@ -45,19 +45,19 @@ variable "aws_region" {
 variable "aws_services" {
   description = "Individual AWS services for hands-on learning - toggle each to see what it does!"
   type = object({
-    enable_eventbridge   = bool  # Event-driven automation (file upload triggers)
-    enable_sns          = bool  # Simple Notification Service (email alerts)
-    enable_cloudwatch   = bool  # Monitoring dashboards and metrics
-    enable_grafana      = bool  # Advanced visualization and dashboards
-    enable_rds          = bool  # Relational Database Service
+    enable_eventbridge   = bool # Event-driven automation (file upload triggers)
+    enable_sns           = bool # Simple Notification Service (email alerts)
+    enable_cloudwatch    = bool # Monitoring dashboards and metrics
+    enable_grafana       = bool # Advanced visualization and dashboards
+    enable_rds           = bool # Relational Database Service
     enable_chaos_testing = bool # Advanced: Resilience testing (FIS + Lambda)
   })
   default = {
-    enable_eventbridge   = true   # 🔄 Try toggling this - see how automation breaks!
-    enable_sns          = true   # 📧 Disable to stop email notifications
-    enable_cloudwatch   = true   # 📊 Core AWS monitoring - always useful
-    enable_grafana      = false  # 📈 Advanced dashboards - costs extra (~$20/month)
-    enable_rds          = false  # 🗄️  Database - costs extra (~$15/month)
+    enable_eventbridge   = true  # 🔄 Try toggling this - see how automation breaks!
+    enable_sns           = true  # 📧 Disable to stop email notifications
+    enable_cloudwatch    = true  # 📊 Core AWS monitoring - always useful
+    enable_grafana       = false # 📈 Advanced dashboards - costs extra (~$20/month)
+    enable_rds           = false # 🗄️  Database - costs extra (~$15/month)
     enable_chaos_testing = false # 🧪 Advanced resilience testing (multiple services)
   }
 
@@ -84,11 +84,11 @@ variable "learning_preset" {
 
   validation {
     condition = contains([
-      "basic",           # Minimal setup - core features only
-      "intermediate",    # Add observability and monitoring
-      "advanced",        # Full self-healing features
-      "enterprise",      # Production-ready configuration
-      "cost-optimized"   # Absolute minimum cost setup
+      "basic",         # Minimal setup - core features only
+      "intermediate",  # Add observability and monitoring
+      "advanced",      # Full self-healing features
+      "enterprise",    # Production-ready configuration
+      "cost-optimized" # Absolute minimum cost setup
     ], var.learning_preset)
     error_message = "Learning preset must be: basic, intermediate, advanced, enterprise, or cost-optimized."
   }
@@ -113,7 +113,7 @@ variable "data_lake_config" {
   }
 
   validation {
-    condition = length(var.data_lake_config.storage_classes) > 0
+    condition     = length(var.data_lake_config.storage_classes) > 0
     error_message = "At least one storage class must be specified."
   }
 }
@@ -131,9 +131,9 @@ variable "networking_config" {
   })
   default = {
     vpc_cidr           = "10.0.0.0/16"
-    enable_nat_gateway = false  # Set to false for cost optimization
-    enable_flow_logs   = true   # Enable for monitoring
-    availability_zones = 2      # Multi-AZ for reliability
+    enable_nat_gateway = false # Set to false for cost optimization
+    enable_flow_logs   = true  # Enable for monitoring
+    availability_zones = 2     # Multi-AZ for reliability
   }
 
   validation {
@@ -156,25 +156,25 @@ variable "processing_config" {
     enable_crawler      = bool
     enable_data_quality = bool
     enable_remediation  = bool
-    glue_version       = string
-    worker_type        = string
-    number_of_workers  = number
-    schedule_crawler   = string
-    schedule_quality   = string
+    glue_version        = string
+    worker_type         = string
+    number_of_workers   = number
+    schedule_crawler    = string
+    schedule_quality    = string
   })
   default = {
     enable_crawler      = true
     enable_data_quality = true
     enable_remediation  = true
-    glue_version       = "4.0"
-    worker_type        = "G.1X"    # Options: G.1X (cost-effective), G.2X (faster), Standard
-    number_of_workers  = 2         # Adjust based on data volume
-    schedule_crawler   = "cron(0 6,12,18 ? * MON-FRI *)"  # 3x daily on weekdays
-    schedule_quality   = "cron(0 2,8,14,20 * * ? *)"      # 4x daily
+    glue_version        = "4.0"
+    worker_type         = "G.1X"                          # Options: G.1X (cost-effective), G.2X (faster), Standard
+    number_of_workers   = 2                               # Adjust based on data volume
+    schedule_crawler    = "cron(0 6,12,18 ? * MON-FRI *)" # 3x daily on weekdays
+    schedule_quality    = "cron(0 2,8,14,20 * * ? *)"     # 4x daily
   }
 
   validation {
-    condition = contains(["G.1X", "G.2X", "Standard"], var.processing_config.worker_type)
+    condition     = contains(["G.1X", "G.2X", "Standard"], var.processing_config.worker_type)
     error_message = "Worker type must be G.1X, G.2X, or Standard."
   }
 
@@ -194,17 +194,17 @@ variable "self_healing_config" {
     enable_auto_remediation = bool
     alert_thresholds = object({
       data_quality_failures = number
-      storage_threshold_gb   = number
-      error_rate_percent     = number
+      storage_threshold_gb  = number
+      error_rate_percent    = number
     })
   })
   default = {
-    notification_email      = "your-email@example.com"  # CHANGE THIS!
+    notification_email      = "your-email@example.com" # CHANGE THIS!
     enable_auto_remediation = true
     alert_thresholds = {
       data_quality_failures = 3
-      storage_threshold_gb   = 100
-      error_rate_percent     = 5
+      storage_threshold_gb  = 100
+      error_rate_percent    = 5
     }
   }
 
@@ -229,18 +229,18 @@ variable "self_healing_config" {
 variable "observability_config" {
   description = "Monitoring, logging, and observability configuration"
   type = object({
-    enable_prometheus         = bool
-    enable_grafana           = bool
+    enable_prometheus          = bool
+    enable_grafana             = bool
     enable_enhanced_monitoring = bool
-    dashboard_types          = list(string)
-    retention_days           = number
+    dashboard_types            = list(string)
+    retention_days             = number
   })
   default = {
-    enable_prometheus         = false  # Enable only in production
-    enable_grafana           = true
+    enable_prometheus          = false # Enable only in production
+    enable_grafana             = true
     enable_enhanced_monitoring = true
-    dashboard_types          = ["main", "detailed", "cost"]
-    retention_days           = 7
+    dashboard_types            = ["main", "detailed", "cost"]
+    retention_days             = 7
   }
 
   validation {
@@ -266,15 +266,15 @@ variable "rds_config" {
     instance_class    = string
     allocated_storage = number
     engine_version    = string
-    multi_az         = bool
-    backup_retention = number
+    multi_az          = bool
+    backup_retention  = number
   })
   default = {
     instance_class    = "db.t3.micro"
     allocated_storage = 20
     engine_version    = "15.7"
-    multi_az         = false  # Single AZ for cost savings in dev
-    backup_retention = 7
+    multi_az          = false # Single AZ for cost savings in dev
+    backup_retention  = 7
   }
 
   validation {

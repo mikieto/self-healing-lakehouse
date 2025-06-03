@@ -5,7 +5,7 @@
 
 terraform {
   required_version = ">= 1.7"
-  
+
   # S3 Backend configuration from bootstrap
   backend "s3" {
     # Configuration provided via backend.hcl from bootstrap
@@ -26,7 +26,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = local.common_tags
   }
@@ -63,13 +63,13 @@ module "vpc" {
 
   enable_nat_gateway = var.networking_config.enable_nat_gateway
   enable_flow_log    = var.networking_config.enable_flow_logs
-  
+
   create_database_subnet_group = var.aws_services.enable_rds
 
   # VPC Flow Logs configuration
-  flow_log_destination_type                = "cloud-watch-logs"
-  create_flow_log_cloudwatch_iam_role     = var.networking_config.enable_flow_logs
-  create_flow_log_cloudwatch_log_group    = var.networking_config.enable_flow_logs
+  flow_log_destination_type            = "cloud-watch-logs"
+  create_flow_log_cloudwatch_iam_role  = var.networking_config.enable_flow_logs
+  create_flow_log_cloudwatch_log_group = var.networking_config.enable_flow_logs
 
   tags = local.common_tags
 }
@@ -157,17 +157,17 @@ module "database" {
   vpc_security_group_ids = [aws_security_group.database[0].id]
   db_subnet_group_name   = module.vpc.database_subnet_group
   publicly_accessible    = false
-  
+
   backup_retention_period = var.rds_config.backup_retention
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
-  multi_az              = var.rds_config.multi_az
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
+  multi_az                = var.rds_config.multi_az
 
   # Performance Insights
   performance_insights_enabled = true
-  monitoring_interval         = 60
-  create_monitoring_role      = true
-  monitoring_role_name        = "${var.project_name}-rds-monitoring-${random_id.suffix.hex}"
+  monitoring_interval          = 60
+  create_monitoring_role       = true
+  monitoring_role_name         = "${var.project_name}-rds-monitoring-${random_id.suffix.hex}"
 
   # Environment-based deletion protection
   deletion_protection = var.environment == "prod"
@@ -193,7 +193,7 @@ module "grafana" {
   permission_type          = "SERVICE_MANAGED"
 
   data_sources = ["CLOUDWATCH"]
-  
+
   tags = local.common_tags
 }
 
@@ -253,7 +253,7 @@ module "automation" {
         source      = ["aws.glue"]
         detail-type = ["Glue Job State Change"]
         detail = {
-          state = ["FAILED"]
+          state   = ["FAILED"]
           jobName = var.processing_config.enable_data_quality ? [aws_glue_job.data_quality[0].name] : []
         }
       })
@@ -390,8 +390,8 @@ resource "aws_glue_job" "data_quality" {
   }
 
   max_retries       = 2
-  timeout          = 60
-  worker_type      = var.processing_config.worker_type
+  timeout           = 60
+  worker_type       = var.processing_config.worker_type
   number_of_workers = var.processing_config.number_of_workers
 
   tags = merge(local.common_tags, {
@@ -428,8 +428,8 @@ resource "aws_glue_job" "remediation" {
   }
 
   max_retries       = 2
-  timeout          = 60
-  worker_type      = var.processing_config.worker_type
+  timeout           = 60
+  worker_type       = var.processing_config.worker_type
   number_of_workers = var.processing_config.number_of_workers
 
   tags = merge(local.common_tags, {

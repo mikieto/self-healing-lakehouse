@@ -23,3 +23,22 @@ variable "alert_email" {
     error_message = "The alert_email must be a valid email address format."
   }
 }
+
+# Version management variables
+variable "git_commit_hash" {
+  description = "Git commit hash for version tracking"
+  type        = string
+  default     = "unknown"
+}
+
+variable "deployment_timestamp" {
+  description = "Deployment timestamp for tracking"
+  type        = string
+  default     = ""
+}
+
+variable "deployed_by" {
+  description = "User or system that deployed the infrastructure"
+  type        = string
+  default     = "terraform"
+}

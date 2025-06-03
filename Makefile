@@ -139,3 +139,52 @@ clean:
 	else \
 		echo "❌ Cleanup cancelled"; \
 	fi
+
+# Version-aware deployment commands
+apply-versioned:
+	@echo "🔄 Deploying with Git version tracking..."
+	@GIT_HASH=$$(git rev-parse HEAD) && \
+	TIMESTAMP=$$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
+	USER_INFO=$$(git config user.name || echo "unknown") && \
+	cd terraform/environments/dev && \
+	terraform apply \
+		-var="git_commit_hash=$$GIT_HASH" \
+		-var="deployment_timestamp=$$TIMESTAMP" \
+		-var="deployed_by=$$USER_INFO"
+
+# Check deployed versions
+check-versions:
+	@echo "📋 Checking deployed script versions..."
+	@BUCKET=$$(cd terraform/environments/dev && terraform output -raw data_lake_bucket_name 2>/dev/null) && \
+	if [ -n "$$BUCKET" ]; then \
+		echo "🔍 Version metadata:"; \
+		aws s3 cp s3://$$BUCKET/scripts/.versions.json - | jq '.'; \
+	else \
+		echo "❌ Bucket not found. Deploy infrastructure first."; \
+	fi
+
+# Show version history
+version-history:
+	@echo "📈 Deployment version history..."
+	@aws logs describe-log-streams \
+		--log-group-name "/aws/terraform/script-deployment" \
+		--query 'logStreams[].logStreamName' \
+		--output table
+
+# Compare versions
+compare-versions:
+	@echo "🔍 Comparing current vs deployed versions..."
+	@GIT_HASH=$$(git rev-parse HEAD) && \
+	BUCKET=$$(cd terraform/environments/dev && terraform output -raw data_lake_bucket_name 2>/dev/null) && \
+	if [ -n "$$BUCKET" ]; then \
+		DEPLOYED_HASH=$$(aws s3 cp s3://$$BUCKET/scripts/.versions.json - | jq -r '.deployment_info.git_commit'); \
+		echo "📊 Current Git commit: $$GIT_HASH"; \
+		echo "📊 Deployed commit: $$DEPLOYED_HASH"; \
+		if [ "$$GIT_HASH" = "$$DEPLOYED_HASH" ]; then \
+			echo "✅ Versions match - no deployment needed"; \
+		else \
+			echo "⚠️  Version mismatch - consider running 'make apply-versioned'"; \
+		fi; \
+	else \
+		echo "❌ Cannot compare - infrastructure not deployed"; \
+	fi

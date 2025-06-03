@@ -51,31 +51,6 @@ resource "aws_glue_catalog_database" "main" {
   tags = local.glue_config.tags
 }
 
-# ===== LAKE FORMATION PERMISSIONS =====
-# Grant Lake Formation permissions to GitHub Actions role for database access
-resource "aws_lakeformation_permissions" "github_actions_database" {
-  principal   = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GitHubActionsRole-68d165a1"
-  permissions = ["ALL"]
-
-  database {
-    name = aws_glue_catalog_database.main.name
-  }
-
-  depends_on = [aws_glue_catalog_database.main]
-}
-
-# Grant Lake Formation permissions to Glue service role
-resource "aws_lakeformation_permissions" "glue_service_database" {
-  principal   = local.glue_iam_role.iam_role_arn
-  permissions = ["ALL"]
-
-  database {
-    name = aws_glue_catalog_database.main.name
-  }
-
-  depends_on = [aws_glue_catalog_database.main]
-}
-
 # ===== ENHANCED GLUE CRAWLER =====
 resource "aws_glue_crawler" "main" {
   name          = "${local.glue_config.name_prefix}-crawler"

@@ -171,12 +171,6 @@ resource "aws_lakeformation_data_lake_settings" "main" {
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 
-  # Disable Lake Formation for this account
-  # This allows standard IAM permissions to work with Glue
-  admins = [
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-  ]
-
   trusted_resource_owners = [
     data.aws_caller_identity.current.account_id
   ]

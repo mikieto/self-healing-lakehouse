@@ -76,7 +76,7 @@ resource "aws_glue_catalog_database" "main" {
 resource "aws_glue_crawler" "main" {
   name          = "${local.glue_config.name_prefix}-crawler"
   database_name = aws_glue_catalog_database.main.name
-  role          = local.glue_iam_role.iam_role_arn
+  role          = local.glue_iam_role.iam_role_name
 
   s3_target {
     path = "s3://${local.glue_config.script_bucket}/raw/"
@@ -209,4 +209,69 @@ resource "aws_glue_trigger" "remediation_on_demand" {
   }
 
   tags = local.glue_config.tags
+}
+
+# =======================================================
+# AWS OFFICIAL: Glue Scripts Auto-deployment 
+# =======================================================
+# Add this to your existing terraform/environments/dev/glue.tf
+
+# AWS Official: S3 Object upload pattern
+resource "aws_s3_object" "data_quality_script" {
+  bucket = module.lakehouse_storage.s3_bucket_id
+  key    = "scripts/data_quality_job.py"
+  source = "${path.root}/../../../scripts/glue/data_quality_job.py"
+  etag   = filemd5("${path.root}/../../../scripts/glue/data_quality_job.py")
+
+  tags = local.glue_config.tags
+}
+
+resource "aws_s3_object" "remediation_script" {
+  bucket = module.lakehouse_storage.s3_bucket_id
+  key    = "scripts/remediation_job.py"
+  source = "${path.root}/../../../scripts/glue/remediation_job.py"
+  etag   = filemd5("${path.root}/../../../scripts/glue/remediation_job.py")
+
+  tags = local.glue_config.tags
+}
+
+# AWS Official: Sample data upload
+resource "aws_s3_object" "sample_data" {
+  bucket = module.lakehouse_storage.s3_bucket_id
+  key    = "raw/sample_data.csv"
+  count  = fileexists("${path.root}/../../../data/samples/sensor_data_clean.csv") ? 1 : 0
+  source = "${path.root}/../../../data/samples/sensor_data_clean.csv"
+  etag   = filemd5("${path.root}/../../../data/samples/sensor_data_clean.csv")
+
+  tags = local.glue_config.tags
+}
+
+# =======================================================
+# UPDATE EXISTING GLUE JOBS: Change script_location only
+# =======================================================
+
+# In your existing aws_glue_job.data_quality, update:
+# script_location = "s3://${local.glue_config.script_bucket}/scripts/data_quality_job.py"
+
+# In your existing aws_glue_job.remediation, update:  
+# script_location = "s3://${local.glue_config.script_bucket}/scripts/remediation_job.py"
+
+# =======================================================
+# AWS OFFICIAL: SNS permissions for Glue
+# =======================================================
+
+resource "aws_iam_role_policy" "glue_sns_minimal" {
+  name = "glue-sns-${random_id.bucket_suffix.hex}"
+  role = local.glue_iam_role.iam_role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "sns:Publish"
+        Resource = module.healing_alerts_sns.topic_arn
+      }
+    ]
+  })
 }

@@ -1,12 +1,4 @@
-# ===============================================
-# [CODE PILLAR] Data Processing Infrastructure
-# ===============================================
-# Purpose: Production-ready data processing with essential features
-# Benefit: Maintainable, scalable, and reliable data pipelines
-# Three Pillars Role: Robust foundation for automated data operations
-# Learning Value: Shows enterprise data processing patterns
-
-# terraform/environments/dev/glue.tf
+# terraform/environments/dev/glue.tf - Simplified IAM-only Version
 
 # Local variables for configuration
 locals {
@@ -15,12 +7,11 @@ locals {
     script_bucket = module.lakehouse_storage.s3_bucket_id
     database_name = "lakehouse_catalog_${random_id.bucket_suffix.hex}"
 
-    # Job configurations
     job_defaults = {
       glue_version        = "4.0"
       python_version      = "3"
       max_retries         = 2
-      timeout             = 60 # minutes
+      timeout             = 60
       max_concurrent_runs = 2
       worker_type         = "G.1X"
       number_of_workers   = 2
@@ -35,7 +26,28 @@ locals {
   }
 }
 
-# ===== GLUE CATALOG =====
+# =======================================================
+# Lake Formation Settings - Delegate to IAM
+# =======================================================
+
+resource "aws_lakeformation_data_lake_settings" "main" {
+  # Minimal Lake Formation - delegate everything to IAM
+  create_database_default_permissions {
+    permissions = ["ALL"]
+    principal   = "IAM_ALLOWED_PRINCIPALS"
+  }
+
+  create_table_default_permissions {
+    permissions = ["ALL"]
+    principal   = "IAM_ALLOWED_PRINCIPALS"
+  }
+
+}
+
+# =======================================================
+# Glue Catalog Database - Simple Configuration
+# =======================================================
+
 resource "aws_glue_catalog_database" "main" {
   name        = local.glue_config.database_name
   description = "Self-Healing Lakehouse Data Catalog"
@@ -51,13 +63,15 @@ resource "aws_glue_catalog_database" "main" {
   tags = local.glue_config.tags
 }
 
-# ===== ENHANCED GLUE CRAWLER =====
+# =======================================================
+# Glue Crawler
+# =======================================================
+
 resource "aws_glue_crawler" "main" {
   name          = "${local.glue_config.name_prefix}-crawler"
   database_name = aws_glue_catalog_database.main.name
   role          = local.glue_iam_role.iam_role_arn
 
-  # S3 targets
   s3_target {
     path = "s3://${local.glue_config.script_bucket}/raw/"
     exclusions = [
@@ -66,13 +80,11 @@ resource "aws_glue_crawler" "main" {
     ]
   }
 
-  # Enhanced schema change policy
   schema_change_policy {
     update_behavior = "UPDATE_IN_DATABASE"
     delete_behavior = "LOG"
   }
 
-  # Configuration for better performance
   configuration = jsonencode({
     "Version" = 1.0
     "CrawlerOutput" = {
@@ -85,13 +97,14 @@ resource "aws_glue_crawler" "main" {
     }
   })
 
-  # Schedule: Run every 6 hours during business hours
   schedule = "cron(0 6,12,18 ? * MON-FRI *)"
-
-  tags = local.glue_config.tags
+  tags     = local.glue_config.tags
 }
 
-# ===== DATA QUALITY JOB (maintaining original name) =====
+# =======================================================
+# Glue Jobs
+# =======================================================
+
 resource "aws_glue_job" "data_quality" {
   name         = "${local.glue_config.name_prefix}-data-quality"
   role_arn     = local.glue_iam_role.iam_role_arn
@@ -102,31 +115,25 @@ resource "aws_glue_job" "data_quality" {
     python_version  = local.glue_config.job_defaults.python_version
   }
 
-  # Production-ready arguments
   default_arguments = {
     "--job-language"                     = "python"
     "--job-bookmark-option"              = "job-bookmark-enable"
     "--enable-metrics"                   = "true"
     "--enable-continuous-cloudwatch-log" = "true"
-
-    # Essential arguments (maintain compatibility)
-    "--TempDir"         = "s3://${local.glue_config.script_bucket}/temp/"
-    "--source-path"     = "s3://${local.glue_config.script_bucket}/raw/"
-    "--quarantine-path" = "s3://${local.glue_config.script_bucket}/quarantine/"
-    "--database-name"   = aws_glue_catalog_database.main.name
-    "--table-name"      = "sample_sensor_data"
-    "--sns-topic-arn"   = module.healing_alerts_sns.topic_arn
+    "--TempDir"                          = "s3://${local.glue_config.script_bucket}/temp/"
+    "--source-path"                      = "s3://${local.glue_config.script_bucket}/raw/"
+    "--quarantine-path"                  = "s3://${local.glue_config.script_bucket}/quarantine/"
+    "--database-name"                    = aws_glue_catalog_database.main.name
+    "--table-name"                       = "sample_sensor_data"
+    "--sns-topic-arn"                    = module.healing_alerts_sns.topic_arn
   }
 
-  # Production execution properties
   execution_property {
     max_concurrent_runs = local.glue_config.job_defaults.max_concurrent_runs
   }
 
-  max_retries = local.glue_config.job_defaults.max_retries
-  timeout     = local.glue_config.job_defaults.timeout
-
-  # Worker configuration
+  max_retries       = local.glue_config.job_defaults.max_retries
+  timeout           = local.glue_config.job_defaults.timeout
   worker_type       = local.glue_config.job_defaults.worker_type
   number_of_workers = local.glue_config.job_defaults.number_of_workers
 
@@ -135,7 +142,6 @@ resource "aws_glue_job" "data_quality" {
   })
 }
 
-# ===== REMEDIATION JOB (maintaining original name) =====
 resource "aws_glue_job" "remediation" {
   name         = "${local.glue_config.name_prefix}-remediation"
   role_arn     = local.glue_iam_role.iam_role_arn
@@ -148,25 +154,22 @@ resource "aws_glue_job" "remediation" {
 
   default_arguments = {
     "--job-language"                     = "python"
-    "--job-bookmark-option"              = "job-bookmark-disable" # Always process all data
+    "--job-bookmark-option"              = "job-bookmark-disable"
     "--enable-metrics"                   = "true"
     "--enable-continuous-cloudwatch-log" = "true"
-
-    # Remediation-specific arguments (maintain compatibility)
-    "--TempDir"         = "s3://${local.glue_config.script_bucket}/temp/"
-    "--source-path"     = "s3://${local.glue_config.script_bucket}/raw/"
-    "--quarantine-path" = "s3://${local.glue_config.script_bucket}/quarantine/"
-    "--sns-topic-arn"   = module.healing_alerts_sns.topic_arn
-    "--database-name"   = aws_glue_catalog_database.main.name
+    "--TempDir"                          = "s3://${local.glue_config.script_bucket}/temp/"
+    "--source-path"                      = "s3://${local.glue_config.script_bucket}/raw/"
+    "--quarantine-path"                  = "s3://${local.glue_config.script_bucket}/quarantine/"
+    "--sns-topic-arn"                    = module.healing_alerts_sns.topic_arn
+    "--database-name"                    = aws_glue_catalog_database.main.name
   }
 
   execution_property {
-    max_concurrent_runs = 1 # Remediation should be serial
+    max_concurrent_runs = 1
   }
 
-  max_retries = local.glue_config.job_defaults.max_retries
-  timeout     = local.glue_config.job_defaults.timeout
-
+  max_retries       = local.glue_config.job_defaults.max_retries
+  timeout           = local.glue_config.job_defaults.timeout
   worker_type       = local.glue_config.job_defaults.worker_type
   number_of_workers = local.glue_config.job_defaults.number_of_workers
 
@@ -175,12 +178,14 @@ resource "aws_glue_job" "remediation" {
   })
 }
 
-# ===== JOB TRIGGERS =====
-# Data Quality Trigger (scheduled)
+# =======================================================
+# Job Triggers
+# =======================================================
+
 resource "aws_glue_trigger" "data_quality_scheduled" {
   name     = "${local.glue_config.name_prefix}-dq-scheduled"
   type     = "SCHEDULED"
-  schedule = "cron(0 2,8,14,20 * * ? *)" # Every 6 hours
+  schedule = "cron(0 2,8,14,20 * * ? *)"
 
   actions {
     job_name = aws_glue_job.data_quality.name
@@ -189,7 +194,6 @@ resource "aws_glue_trigger" "data_quality_scheduled" {
   tags = local.glue_config.tags
 }
 
-# Remediation Trigger (on-demand)
 resource "aws_glue_trigger" "remediation_on_demand" {
   name = "${local.glue_config.name_prefix}-remediation-demand"
   type = "ON_DEMAND"
@@ -199,33 +203,4 @@ resource "aws_glue_trigger" "remediation_on_demand" {
   }
 
   tags = local.glue_config.tags
-}
-
-# ===== OUTPUTS =====
-output "data_processing_enhanced" {
-  description = "Balanced data processing components"
-  value = {
-    database = {
-      name = aws_glue_catalog_database.main.name
-      arn  = aws_glue_catalog_database.main.arn
-    }
-    crawler = {
-      name = aws_glue_crawler.main.name
-      arn  = aws_glue_crawler.main.arn
-    }
-    jobs = {
-      data_quality = {
-        name = aws_glue_job.data_quality.name
-        arn  = aws_glue_job.data_quality.arn
-      }
-      remediation = {
-        name = aws_glue_job.remediation.name
-        arn  = aws_glue_job.remediation.arn
-      }
-    }
-    triggers = {
-      scheduled_dq          = aws_glue_trigger.data_quality_scheduled.name
-      on_demand_remediation = aws_glue_trigger.remediation_on_demand.name
-    }
-  }
 }

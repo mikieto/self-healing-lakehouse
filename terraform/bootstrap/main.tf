@@ -149,30 +149,3 @@ resource "aws_iam_policy" "github_actions_permissions" {
     Project = var.project_name
   }
 }
-
-# =======================================================
-# Lake Formation Data Lake Settings
-# =======================================================
-
-resource "aws_lakeformation_data_lake_settings" "main" {
-  # Only set account root as admin
-  admins = [
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-  ]
-
-  # DISABLE Lake Formation access control - use IAM only
-  create_database_default_permissions {
-    permissions = ["ALL"]
-    principal   = "IAM_ALLOWED_PRINCIPALS"
-  }
-
-  create_table_default_permissions {
-    permissions = ["ALL"] 
-    principal   = "IAM_ALLOWED_PRINCIPALS"
-  }
-
-  trusted_resource_owners = [
-    data.aws_caller_identity.current.account_id
-  ]
-
-}

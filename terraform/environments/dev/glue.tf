@@ -1,11 +1,11 @@
-# terraform/environments/dev/glue.tf - Simplified IAM-only Version
+# terraform/environments/dev/glue.tf - Use new database name
 
-# Local variables for configuration
 locals {
   glue_config = {
     name_prefix   = "lakehouse-${random_id.bucket_suffix.hex}"
     script_bucket = module.lakehouse_storage.s3_bucket_id
-    database_name = "lakehouse_catalog_${random_id.bucket_suffix.hex}"
+    # Use timestamp to ensure unique name
+    database_name = "lakehouse_db_${random_id.bucket_suffix.hex}_${formatdate("YYYYMMDD", timestamp())}"
 
     job_defaults = {
       glue_version        = "4.0"
@@ -27,11 +27,11 @@ locals {
 }
 
 # =======================================================
-# Lake Formation Settings - Delegate to IAM
+# Lake Formation Settings - Complete IAM Delegation
 # =======================================================
 
 resource "aws_lakeformation_data_lake_settings" "main" {
-  # Minimal Lake Formation - delegate everything to IAM
+  # Completely delegate to IAM
   create_database_default_permissions {
     permissions = ["ALL"]
     principal   = "IAM_ALLOWED_PRINCIPALS"
@@ -42,15 +42,18 @@ resource "aws_lakeformation_data_lake_settings" "main" {
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 
+  # Remove any admin restrictions
+  admins = []
+
 }
 
 # =======================================================
-# Glue Catalog Database - Simple Configuration
+# Glue Catalog Database
 # =======================================================
 
 resource "aws_glue_catalog_database" "main" {
   name        = local.glue_config.database_name
-  description = "Self-Healing Lakehouse Data Catalog"
+  description = "Self-Healing Lakehouse Data Catalog - Clean Installation"
 
   create_table_default_permission {
     permissions = ["SELECT"]
@@ -61,6 +64,9 @@ resource "aws_glue_catalog_database" "main" {
   }
 
   tags = local.glue_config.tags
+
+  # Ensure Lake Formation is set up first
+  depends_on = [aws_lakeformation_data_lake_settings.main]
 }
 
 # =======================================================

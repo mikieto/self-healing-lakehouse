@@ -66,6 +66,28 @@ module "s3_bucket" {
 }
 
 # =======================================================
+# OIDC Provider for GitHub Actions (Recreated)
+# =======================================================
+
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com",
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
+  ]
+
+  tags = {
+    Name    = "GitHub Actions OIDC Provider"
+    Project = var.project_name
+  }
+}
+
+# =======================================================
 # IAM Module for GitHub Actions
 # =======================================================
 
@@ -85,9 +107,11 @@ module "iam_github_oidc_role" {
     Name    = "GitHub Actions Role"
     Project = var.project_name
   }
+
+  depends_on = [aws_iam_openid_connect_provider.github]
 }
 
-# Custom policy for lakehouse permissions
+# Custom policy for lakehouse permissions (Fixed Version)
 resource "aws_iam_policy" "github_actions_permissions" {
   name = "github-actions-lakehouse-policy-${random_id.suffix.hex}"
 
@@ -113,8 +137,7 @@ resource "aws_iam_policy" "github_actions_permissions" {
           # Additional services
           "secretsmanager:*", "aps:*", "grafana:*", "lakeformation:*",
           "application-autoscaling:*", "elasticloadbalancing:*",
-          "autoscaling:*", "ssm:*", "sts:GetCallerIdentity",
-          "lakeformation:*"
+          "autoscaling:*", "ssm:*", "sts:GetCallerIdentity"
         ]
         Resource = "*"
       }
@@ -128,48 +151,28 @@ resource "aws_iam_policy" "github_actions_permissions" {
 }
 
 # =======================================================
-# OIDC Provider for GitHub Actions (Missing Definition)
-# =======================================================
-
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = [
-    "sts.amazonaws.com",
-  ]
-
-  thumbprint_list = [
-    "6938fd4d98bab03faadb97b34396831e3780aea1",
-    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
-  ]
-
-  tags = {
-    Name    = "GitHub Actions OIDC Provider"
-    Project = var.project_name
-  }
-}
-
-# =======================================================
 # Lake Formation Data Lake Settings
 # =======================================================
 
 resource "aws_lakeformation_data_lake_settings" "main" {
+  # Only set account root as admin
   admins = [
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root", # Account root
-    module.iam_github_oidc_role.arn                                     # GitHub Actions Role
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
   ]
 
+  # Use IAM_ALLOWED_PRINCIPALS for IAM policy-based access control
   create_database_default_permissions {
     permissions = ["ALL"]
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 
   create_table_default_permissions {
-    permissions = ["ALL"]
+    permissions = ["ALL"] 
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
 
   trusted_resource_owners = [
     data.aws_caller_identity.current.account_id
   ]
+
 }

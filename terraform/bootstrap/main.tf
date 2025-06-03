@@ -160,7 +160,7 @@ resource "aws_lakeformation_data_lake_settings" "main" {
     "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
   ]
 
-  # Use IAM_ALLOWED_PRINCIPALS for IAM policy-based access control
+  # DISABLE Lake Formation access control - use IAM only
   create_database_default_permissions {
     permissions = ["ALL"]
     principal   = "IAM_ALLOWED_PRINCIPALS"
@@ -170,6 +170,12 @@ resource "aws_lakeformation_data_lake_settings" "main" {
     permissions = ["ALL"] 
     principal   = "IAM_ALLOWED_PRINCIPALS"
   }
+
+  # Disable Lake Formation for this account
+  # This allows standard IAM permissions to work with Glue
+  admins = [
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+  ]
 
   trusted_resource_owners = [
     data.aws_caller_identity.current.account_id

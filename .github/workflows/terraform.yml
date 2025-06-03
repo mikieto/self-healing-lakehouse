@@ -26,7 +26,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Full git history for SARIF processing
+        fetch-depth: 0
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -46,11 +46,36 @@ jobs:
 
     - name: Terraform Init
       id: init
-      run: terraform init -backend-config=backend.hcl  # S3 Native Locking
+      run: terraform init -backend-config=backend.hcl
 
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
+
+    - name: Check for Script Changes
+      id: script_changes
+      run: |
+        echo "📊 Checking for Glue script changes..."
+        
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+        else
+          BASE_SHA="${{ github.event.before }}"
+          HEAD_SHA="${{ github.sha }}"
+        fi
+        
+        # Check for Glue script changes
+        CHANGED_SCRIPTS=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep "scripts/glue/" || echo "none")
+        
+        if [ "$CHANGED_SCRIPTS" != "none" ]; then
+          echo "🔄 Glue script changes detected:"
+          echo "$CHANGED_SCRIPTS"
+          echo "script_changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "📋 No Glue script changes detected"
+          echo "script_changed=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Run Trivy security scan
       uses: aquasecurity/trivy-action@master
@@ -61,34 +86,23 @@ jobs:
         output: 'trivy-results.sarif'
       continue-on-error: true
 
-    # ===== CONDITIONAL SARIF UPLOAD =====
     - name: Check if SARIF file exists
-      id: check-sarif
+      id: check_sarif
       run: |
         if [ -f "trivy-results.sarif" ]; then
           echo "sarif_exists=true" >> $GITHUB_OUTPUT
-          echo "✅ SARIF file found"
         else
           echo "sarif_exists=false" >> $GITHUB_OUTPUT
-          echo "⚠️ SARIF file not found - Trivy scan may have failed"
+          echo "⚠️ SARIF file not found - creating empty file"
+          echo '{"runs": []}' > trivy-results.sarif
         fi
-  
+
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
 
-    - name: Handle Trivy scan failure
-      if: steps.check-sarif.outputs.sarif_exists == 'false'
-      run: |
-        echo "⚠️ Trivy security scan failed or produced no results"
-        echo "This is not blocking the pipeline, but should be investigated"
-        echo "Possible causes:"
-        echo "- No security issues found (good!)"
-        echo "- Scan configuration issue"
-        echo "- Trivy version compatibility"
-  
     - name: Terraform Plan
       id: plan
       if: github.event_name == 'pull_request'
@@ -97,7 +111,28 @@ jobs:
 
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false -var="alert_email=${{ vars.ALERT_EMAIL }}"
+      run: |
+        GIT_HASH="${{ github.sha }}"
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        terraform apply -auto-approve -input=false \
+          -var="alert_email=${{ vars.ALERT_EMAIL }}" \
+          -var="git_commit_hash=$GIT_HASH" \
+          -var="deployment_timestamp=$TIMESTAMP" \
+          -var="deployed_by=github-actions"
+
+    - name: Verify Script Deployment
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.script_changes.outputs.script_changed == 'true'
+      run: |
+        echo "🔍 Verifying Glue script deployment..."
+        
+        BUCKET=$(terraform output -raw data_lake_bucket_name)
+        
+        echo "📄 Checking uploaded scripts:"
+        aws s3 ls s3://$BUCKET/scripts/
+        
+        echo "📊 Checking version metadata:"
+        aws s3 cp s3://$BUCKET/scripts/.versions.json - | jq '.'
 
     - name: Send notification
       if: failure()

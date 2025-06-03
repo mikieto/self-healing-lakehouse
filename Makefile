@@ -188,3 +188,33 @@ compare-versions:
 	else \
 		echo "❌ Cannot compare - infrastructure not deployed"; \
 	fi
+
+## CI/CD simulation and validation commands
+ci-validate-scripts:
+	@echo "🔍 Running Glue scripts validation locally..."
+	@python3 -m py_compile scripts/glue/data_quality_job.py
+	@python3 -m py_compile scripts/glue/remediation_job.py
+	@echo "✅ Local script validation passed"
+
+ci-test-full:
+	@echo "🧪 Running full CI test simulation..."
+	@make ci-validate-scripts
+	@make check
+	@make validate
+	@echo "✅ Local CI simulation completed"
+
+# GitHub Actions simulation
+simulate-ci:
+	@echo "🎭 Simulating CI/CD workflow..."
+	@make ci-validate-scripts
+	@echo "📊 Script changes would trigger GitHub Actions"
+	@echo "🔄 Version tracking deployment on main branch"
+	@echo "🎯 CI/CD simulation completed successfully"
+
+# Pre-commit validation
+pre-commit:
+	@echo "🔍 Pre-commit validation..."
+	@make ci-validate-scripts
+	@make fmt
+	@make validate
+	@echo "✅ Pre-commit checks passed - ready to commit"

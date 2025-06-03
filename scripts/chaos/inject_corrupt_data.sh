@@ -1,7 +1,7 @@
 #!/bin/bash
 # Simple chaos engineering script for Self-Healing Lakehouse
 
-BUCKET="lakehouse-data-c4736c4d"
+BUCKET="lakehouse-data-bec8c89a"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 echo "🧪 Injecting corrupt data for chaos engineering test..."

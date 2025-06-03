@@ -198,3 +198,194 @@ output "cloudwatch_info" {
     console_url = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:"
   }
 }
+
+# Data Quality Trends Dashboard
+resource "aws_cloudwatch_dashboard" "data_quality_trends" {
+  dashboard_name = "SelfHealingLakehouse-DataQuality-Trends"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["SelfHealingLakehouse", "DataQualityScore", "JobName", aws_glue_job.data_quality.name, "Environment", "dev"]
+          ]
+          period = 300
+          stat   = "Average"
+          region = var.aws_region
+          title  = "📊 Data Quality Score Trend"
+          yAxis = {
+            left = {
+              min = 0
+              max = 100
+            }
+          }
+          annotations = {
+            horizontal = [
+              {
+                label = "Quality Threshold"
+                value = 70
+              }
+            ]
+          }
+        }
+      },
+      {
+        type   = "metric"
+        x      = 8
+        y      = 0
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["SelfHealingLakehouse", "DataRowCount", "JobName", aws_glue_job.data_quality.name, "Environment", "dev"],
+            [".", "NullValueCount", ".", ".", ".", "."],
+            [".", "OutlierCount", ".", ".", ".", "."]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = var.aws_region
+          title  = "📈 Data Volume & Quality Issues"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 16
+        y      = 0
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["SelfHealingLakehouse", "ProcessingTimeSeconds", "JobName", aws_glue_job.data_quality.name, "Environment", "dev"]
+          ]
+          period = 300
+          stat   = "Average"
+          region = var.aws_region
+          title  = "⏱️ Processing Performance"
+          yAxis = {
+            left = {
+              min = 0
+            }
+          }
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["SelfHealingLakehouse", "JobStatus", "JobName", aws_glue_job.data_quality.name, "Environment", "dev"],
+            [".", "QualityViolationCount", ".", ".", ".", "."],
+            [".", "JobErrorCount", ".", ".", ".", "."]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = var.aws_region
+          title  = "🚨 Job Status & Violations"
+          annotations = {
+            horizontal = [
+              {
+                label = "Success"
+                value = 2
+              },
+              {
+                label = "Warning"
+                value = 1
+              },
+              {
+                label = "Failure"
+                value = 0
+              }
+            ]
+          }
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/S3", "NumberOfObjects", "BucketName", module.lakehouse_storage.s3_bucket_id, "StorageType", "AllStorageTypes"],
+            ["AWS/Events", "MatchedEvents", "RuleName", "new_data_uploaded"]
+          ]
+          period = 300
+          stat   = "Sum"
+          region = var.aws_region
+          title  = "🗄️ Data Lake Activity"
+        }
+      },
+      {
+        type   = "text"
+        x      = 0
+        y      = 12
+        width  = 24
+        height = 2
+
+        properties = {
+          markdown = "## 🎯 Data Quality Monitoring Dashboard\n\n**Phase 3.2.1 Implementation**: Real-time data quality trends with custom CloudWatch metrics. Quality score tracks data health over time, with automatic alerting when scores drop below 70%."
+        }
+      }
+    ]
+  })
+
+}
+
+# Enhanced metric alarms for data quality trends
+resource "aws_cloudwatch_metric_alarm" "data_quality_score_low" {
+  alarm_name          = "${local.cloudwatch_config.name_prefix}-quality-score-low"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "DataQualityScore"
+  namespace           = "SelfHealingLakehouse"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "70"
+  alarm_description   = "Data quality score dropped below acceptable threshold"
+
+  dimensions = {
+    JobName     = aws_glue_job.data_quality.name
+    Environment = "dev"
+  }
+
+  alarm_actions = [module.healing_alerts_sns.topic_arn]
+  ok_actions    = [module.healing_alerts_sns.topic_arn]
+
+  tags = local.cloudwatch_config.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "high_processing_time" {
+  alarm_name          = "${local.cloudwatch_config.name_prefix}-slow-processing"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "ProcessingTimeSeconds"
+  namespace           = "SelfHealingLakehouse"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "300" # 5 minutes
+  alarm_description   = "Data processing taking longer than expected"
+
+  dimensions = {
+    JobName     = aws_glue_job.data_quality.name
+    Environment = "dev"
+  }
+
+  alarm_actions = [module.healing_alerts_sns.topic_arn]
+
+  tags = local.cloudwatch_config.tags
+}

@@ -236,15 +236,6 @@ resource "aws_s3_object" "remediation_script" {
 }
 
 # AWS Official: Sample data upload
-resource "aws_s3_object" "sample_data" {
-  bucket = module.lakehouse_storage.s3_bucket_id
-  key    = "raw/sample_data.csv"
-  count  = fileexists("${path.root}/../../../data/samples/sensor_data_clean.csv") ? 1 : 0
-  source = "${path.root}/../../../data/samples/sensor_data_clean.csv"
-  etag   = filemd5("${path.root}/../../../data/samples/sensor_data_clean.csv")
-
-  tags = local.glue_config.tags
-}
 
 # =======================================================
 # UPDATE EXISTING GLUE JOBS: Change script_location only
@@ -273,5 +264,47 @@ resource "aws_iam_role_policy" "glue_sns_minimal" {
         Resource = module.healing_alerts_sns.topic_arn
       }
     ]
+  })
+}
+
+# =======================================================
+# AWS-based Sample Data (No Local Files Required)
+# =======================================================
+resource "aws_s3_object" "sample_data_clean" {
+  bucket  = module.lakehouse_storage.s3_bucket_id
+  key     = "raw/sample_data_clean.csv"
+  content = <<-CSV
+sensor_id,temperature,humidity,timestamp,status
+SENSOR_001,22.5,45.2,2024-06-03T10:00:00Z,OK
+SENSOR_002,23.1,47.8,2024-06-03T10:01:00Z,OK
+SENSOR_003,21.8,44.5,2024-06-03T10:02:00Z,OK
+SENSOR_004,24.2,49.1,2024-06-03T10:03:00Z,OK
+SENSOR_005,22.9,46.3,2024-06-03T10:04:00Z,OK
+CSV
+
+  content_type = "text/csv"
+  
+  tags = merge(local.glue_config.tags, {
+    Purpose = "sample-data"
+    Type    = "clean-sensor-data"
+  })
+}
+
+resource "aws_s3_object" "sample_data_corrupt" {
+  bucket  = module.lakehouse_storage.s3_bucket_id
+  key     = "raw/sample_data_corrupt.csv"  
+  content = <<-CSV
+sensor_id,temperature,humidity,timestamp,status
+SENSOR_999,999.0,999.0,invalid_timestamp,CORRUPT
+invalid_row_data
+SENSOR_888,not_a_number,not_a_number,2024-01-01,ANOMALY
+SENSOR_777,,,-999,ERROR
+CSV
+
+  content_type = "text/csv"
+  
+  tags = merge(local.glue_config.tags, {
+    Purpose = "sample-data"
+    Type    = "corrupt-test-data"
   })
 }

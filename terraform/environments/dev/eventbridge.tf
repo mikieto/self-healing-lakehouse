@@ -1,4 +1,4 @@
-# eventbridge.tf - Conflict Resolution Version
+# eventbridge.tf
 # EventBridge configuration with unique naming to avoid conflicts
 
 # EventBridge rule for S3 events

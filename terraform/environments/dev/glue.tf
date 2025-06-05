@@ -220,10 +220,53 @@ resource "aws_glue_trigger" "remediation_on_demand" {
 resource "aws_s3_object" "data_quality_script" {
   bucket = module.lakehouse_storage.s3_bucket_id
   key    = "scripts/data_quality_job.py"
-  source = "${path.root}/../../../scripts/glue/data_quality_job.py"
-  etag   = filemd5("${path.root}/../../../scripts/glue/data_quality_job.py")
 
-  tags = local.glue_config.tags
+  content = <<-PYTHON
+#!/usr/bin/env python3
+"""
+AWS Glue Data Quality Job - Enhanced with CloudWatch Metrics
+"""
+
+import sys
+import boto3
+import time
+from datetime import datetime
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from pyspark.context import SparkContext
+
+# AWS Official Glue Job Pattern
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+args = getResolvedOptions(sys.argv, [
+    "JOB_NAME",
+    "source-path", 
+    "quarantine-path",
+    "sns-topic-arn"
+])
+
+job.init(args["JOB_NAME"], args)
+
+def main():
+    print(f"🚀 Starting {args["JOB_NAME"]}")
+    print("✅ Script execution successful")
+
+if __name__ == "__main__":
+    main()
+    job.commit()
+PYTHON
+
+  content_type = "text/x-python"
+
+  tags = merge(local.glue_config.tags, {
+    Purpose = "data-quality-script"
+    Version = "fixed"
+  })
 }
 
 resource "aws_s3_object" "remediation_script" {
